@@ -1,16 +1,16 @@
-import Editor from "@/components/Editor";
+import TipTapEditor from "@/components/editor/TipTap/TipTapEditor";
 import { Panel, Group, Separator } from "react-resizable-panels";
 
 export default function Workspace() {
   return (
     <Group
       orientation="horizontal"
-      className="mx-auto flex h-full w-full max-w-6xl"
+      className="mx-0 flex h-full w-full"
     >
       <Panel>
         <div className="h-full overflow-y-auto">
           <div className="mx-auto min-h-full w-full max-w-[8.5in]">
-            <Editor />
+            <TipTapEditor />
           </div>
         </div>
       </Panel>

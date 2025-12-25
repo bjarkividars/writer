@@ -1,5 +1,4 @@
-@import "tailwindcss/preflight";
-@import "tailwindcss/utilities";
+@import "tailwindcss";
 
 /* -----------------------------
    Design Tokens
@@ -7,46 +6,49 @@
 
 @layer base {
   :root {
-    /* Colors — light */
+    /* Notion-inspired light palette */
     --bg: 0 0% 100%;
-    --bg-muted: 0 0% 96%;
+    --bg-muted: 45 9% 97%;
+    --bg-hover: 45 8% 95%;
 
-    --fg: 222 47% 11%;
-    --fg-muted: 215 16% 47%;
+    --fg: 40 6% 20%;
+    --fg-muted: 40 4% 56%;
 
-    --border: 214 32% 91%;
-    --accent: 222 89% 55%;
+    --border: 40 6% 90%;
+    --accent: 40 6% 20%;
     --accent-fg: 0 0% 100%;
 
-    --danger: 0 72% 51%;
+    --danger: 0 65% 50%;
 
     /* Editor-specific */
     --editor-bg: var(--bg);
     --editor-fg: var(--fg);
 
     /* Radius */
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
 
-    /* Shadows */
+    /* Shadows — Notion-style soft shadows */
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
-    --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06);
+    --shadow-md: 0 4px 12px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.04);
+    --shadow-lg: 0 12px 28px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.04);
   }
 
   .dark {
-    /* Colors — dark */
-    --bg: 222 47% 7%;
-    --bg-muted: 222 47% 11%;
+    /* Notion-inspired dark palette */
+    --bg: 0 0% 10%;
+    --bg-muted: 0 0% 14%;
+    --bg-hover: 0 0% 18%;
 
-    --fg: 210 40% 96%;
-    --fg-muted: 215 20% 65%;
+    --fg: 40 6% 90%;
+    --fg-muted: 40 4% 55%;
 
-    --border: 222 28% 18%;
-    --accent: 222 89% 60%;
-    --accent-fg: 0 0% 100%;
+    --border: 0 0% 20%;
+    --accent: 40 6% 90%;
+    --accent-fg: 0 0% 10%;
 
-    --danger: 0 62% 60%;
+    --danger: 0 55% 55%;
 
     --editor-bg: var(--bg);
     --editor-fg: var(--fg);
@@ -113,6 +115,22 @@
   .bg-fg-muted {
     background-color: hsl(var(--fg-muted));
   }
+
+  .bg-foreground {
+    background-color: hsl(var(--fg));
+  }
+
+  .text-background {
+    color: hsl(var(--bg));
+  }
+
+  .bg-hover {
+    background-color: hsl(var(--bg-hover));
+  }
+
+  .shadow-bubble {
+    box-shadow: var(--shadow-lg);
+  }
 }
 
 /* -----------------------------
@@ -142,6 +160,11 @@
   min-height: 100%;
   padding: 4rem 2.5rem 6rem;
   outline: none;
+}
+
+/* Default text selection - match the AI highlight color */
+.ProseMirror ::selection {
+  background-color: hsl(var(--accent) / 0.25);
 }
 
 .ProseMirror p {
