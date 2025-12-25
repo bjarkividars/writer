@@ -25,7 +25,7 @@ export const AiHighlight = Mark.create({
       {
         ...HTMLAttributes,
         "data-ai-highlight": "",
-        style: "background-color: hsl(var(--accent) / 0.25); border-radius: 2px; padding: 0.1em 0; margin: -0.3em 0; box-decoration-break: clone; -webkit-box-decoration-break: clone;",
+        style: "background-color: color-mix(in srgb, var(--color-accent) 25%, transparent); border-radius: 2px; padding: 0.1em 0; margin: -0.3em 0; box-decoration-break: clone; -webkit-box-decoration-break: clone;",
       },
       0,
     ];

@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
-import { MoreVertical } from "lucide-react";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import AssistantInput from "@/components/editor/BubbleToolbar/AssistantInput";
 import FormattingButtons from "@/components/editor/BubbleToolbar/FormattingButtons";
 import { useSelectionBubbleAnchor } from "@/hooks/editor/useSelectionBubbleAnchor";
-import { Popover, Separator, Toolbar, Tooltip } from "@base-ui/react";
+import { Popover, Toolbar, Tooltip } from "@base-ui/react";
 
 // Snapshot ref into state to avoid reading .current during render
 function useResolvedElement<T extends HTMLElement>(ref: RefObject<T | null>) {
@@ -103,30 +102,10 @@ export default function BubbleToolbar() {
                   onSubmit={handleSubmit}
                 />
 
-                {!isAiMode && (
-                  <>
-                    <Separator
-                      orientation="vertical"
-                      className="h-4 w-px bg-border opacity-50"
-                    />
-                    <FormattingButtons className="transition-all duration-150" />
-                  </>
-                )}
-
-                {isAiMode && (
-                  <div className="self-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        exitAiMode();
-                      }}
-                      onMouseDown={(e) => e.preventDefault()}
-                      className="flex h-6 w-6 items-center justify-center rounded text-foreground opacity-50 transition-all duration-150 hover:opacity-100 hover:bg-hover mb-1"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
+                <FormattingButtons
+                  className="transition-all duration-150"
+                  isAiMode={isAiMode}
+                />
               </Toolbar.Root>
             </Tooltip.Provider>
           </Popover.Popup>

@@ -38,9 +38,9 @@ export default function ToolbarButton({
               e.stopPropagation();
             }}
             className={[
-              "flex h-7 w-7 items-center justify-center rounded transition-colors",
+              "flex h-7 w-7 items-center justify-center rounded transition-colors cursor-pointer",
               active
-                ? "bg-foreground text-background"
+                ? "bg-muted text-foreground"
                 : "text-foreground opacity-50 hover:opacity-100 hover:bg-hover",
               disabled && "cursor-not-allowed opacity-30",
             ]
