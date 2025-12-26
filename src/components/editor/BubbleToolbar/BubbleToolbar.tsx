@@ -20,7 +20,14 @@ function useResolvedElement<T extends HTMLElement>(ref: RefObject<T | null>) {
 }
 
 export default function BubbleToolbar() {
-  const { editor, editorRootRef, enterAiMode, exitAiMode, isAiMode } = useEditorContext();
+  const {
+    editor,
+    editorRootRef,
+    enterAiMode,
+    exitAiMode,
+    isAiMode,
+    runAiEdit,
+  } = useEditorContext();
 
   const { open, anchorRef, popoverRef, close } = useSelectionBubbleAnchor({
     editor,
@@ -37,8 +44,8 @@ export default function BubbleToolbar() {
     }
   }, [open, isAiMode, exitAiMode]);
 
-  const handleSubmit = (query: string) => {
-    console.log("AI Query:", query);
+  const handleSubmit = (instruction: string) => {
+    runAiEdit(instruction);
   };
 
   const handleOpenChange = (isOpen: boolean) => {

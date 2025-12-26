@@ -11,6 +11,7 @@ import {
   ReactNode,
 } from "react";
 import type { Editor } from "@tiptap/react";
+import { useAiEdit } from "@/hooks/editor/useAiEdit";
 
 type SelectionRange = { from: number; to: number } | null;
 
@@ -27,11 +28,16 @@ type EditorContextValue = {
   editorRootRef: RefObject<HTMLDivElement | null>;
   textFormat: TextFormatValue;
   activeMarks: string[];
-  // AI highlight
+  // AI highlight (for visual selection when input is focused)
   enterAiMode: () => void;
   exitAiMode: () => void;
   isAiMode: boolean;
   selectedText: string;
+  // AI editing
+  runAiEdit: (instruction: string) => void;
+  isAiEditLoading: boolean;
+  aiEditError: unknown;
+  resetAiEdit: () => void;
 };
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -63,6 +69,9 @@ export function EditorProvider({
   const [highlightedRange, setHighlightedRange] =
     useState<SelectionRange>(null);
   const [selectedText, setSelectedText] = useState("");
+
+  // AI editing hook
+  const aiEdit = useAiEdit(editor);
 
   // Update formatting states when selection changes
   useEffect(() => {
@@ -164,6 +173,11 @@ export function EditorProvider({
       exitAiMode,
       isAiMode,
       selectedText,
+      // AI editing
+      runAiEdit: aiEdit.run,
+      isAiEditLoading: aiEdit.isLoading,
+      aiEditError: aiEdit.error,
+      resetAiEdit: aiEdit.reset,
     }),
     [
       editor,
@@ -174,6 +188,10 @@ export function EditorProvider({
       exitAiMode,
       isAiMode,
       selectedText,
+      aiEdit.run,
+      aiEdit.isLoading,
+      aiEdit.error,
+      aiEdit.reset,
     ]
   );
 
