@@ -9,6 +9,8 @@ import {
     generateDocVersion,
 } from "@/lib/ai";
 
+type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
+
 /**
  * Return type of useAiEdit hook
  */
@@ -73,6 +75,8 @@ export function useAiEdit(editor: Editor | null) {
     // React state for UI
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const [aiInteractionState, setAiInteractionState] = useState<AiInteractionState>("idle");
+    const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
 
     /**
      * Extract edits from partial JSON, including incomplete replacement text
@@ -175,6 +179,8 @@ export function useAiEdit(editor: Editor | null) {
     const processEdits = useCallback((edits: unknown[]) => {
         if (!editor) return;
 
+        let appliedAnyEdit = false;
+
         edits.forEach((edit, index) => {
             if (!isValidEdit(edit)) return;
 
@@ -196,6 +202,7 @@ export function useAiEdit(editor: Editor | null) {
                     });
 
                     state = editsState.current.get(index)!;
+                    appliedAnyEdit = true;
                 }
             }
 
@@ -213,10 +220,17 @@ export function useAiEdit(editor: Editor | null) {
 
                     // Update state
                     state.replacementSeen = newText;
+                    appliedAnyEdit = true;
                 }
             }
         });
-    }, [editor, resolveTarget]);
+
+        // Notify streaming started on first edit
+        if (appliedAnyEdit && !hasStartedStreaming) {
+            setHasStartedStreaming(true);
+            setAiInteractionState("streaming");
+        }
+    }, [editor, resolveTarget, hasStartedStreaming]);
 
     /**
      * Stream edits from the API
@@ -224,6 +238,8 @@ export function useAiEdit(editor: Editor | null) {
     const streamEdits = useCallback(async (payload: EditRequest) => {
         setIsLoading(true);
         setError(null);
+        setHasStartedStreaming(false);
+        setAiInteractionState("loading");
         editsState.current.clear();
 
         // Lock editor
@@ -278,6 +294,7 @@ export function useAiEdit(editor: Editor | null) {
                 editor.setEditable(true);
             }
             abortControllerRef.current = null;
+            setAiInteractionState("complete");
         }
     }, [editor, tryParsePartialJSON, processEdits]);
 
@@ -331,6 +348,7 @@ export function useAiEdit(editor: Editor | null) {
         }
 
         setIsLoading(false);
+        setAiInteractionState("idle");
 
         if (editor) {
             editor.setEditable(true);
@@ -345,6 +363,7 @@ export function useAiEdit(editor: Editor | null) {
         editsState.current.clear();
         requestContextRef.current = null;
         setError(null);
+        setAiInteractionState("idle");
     }, [stop]);
 
     return {
@@ -353,5 +372,6 @@ export function useAiEdit(editor: Editor | null) {
         error,
         reset,
         stop,
+        aiInteractionState,
     };
 }

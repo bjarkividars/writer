@@ -96,7 +96,7 @@ export default function FormattingButtons({
           type="button"
           onClick={() => exitAiMode()}
           onMouseDown={(e) => e.preventDefault()}
-          className="flex h-6 w-6 items-center justify-center rounded text-foreground opacity-50 transition-all duration-150 hover:opacity-100 hover:bg-hover"
+          className="btn-ghost btn-icon opacity-50 hover:opacity-100"
         >
           <MoreVertical className="h-4 w-4" />
         </button>

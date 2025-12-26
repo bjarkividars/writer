@@ -26,8 +26,13 @@ export default function BubbleToolbar() {
     enterAiMode,
     exitAiMode,
     isAiMode,
-    runAiEdit,
+    submitAiInstruction,
+    undoLastEdit,
+    aiInteractionState,
+    completedPrompt,
   } = useEditorContext();
+
+  const [inputValue, setInputValue] = useState("");
 
   const { open, anchorRef, popoverRef, close } = useSelectionBubbleAnchor({
     editor,
@@ -44,8 +49,32 @@ export default function BubbleToolbar() {
     }
   }, [open, isAiMode, exitAiMode]);
 
+  // Clear input when entering complete state
+  useEffect(() => {
+    if (aiInteractionState === "complete") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInputValue("");
+    }
+  }, [aiInteractionState]);
+
+  // Clear input when exiting AI mode
+  useEffect(() => {
+    if (!isAiMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setInputValue("");
+    }
+  }, [isAiMode]);
+
   const handleSubmit = (instruction: string) => {
-    runAiEdit(instruction);
+    submitAiInstruction(instruction);
+  };
+
+  const handleUndo = () => {
+    // Restore the prompt to the input before undoing
+    if (completedPrompt) {
+      setInputValue(completedPrompt.text);
+    }
+    undoLastEdit();
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -96,23 +125,54 @@ export default function BubbleToolbar() {
             <Tooltip.Provider>
               <Toolbar.Root
                 orientation="horizontal"
-                className="flex items-center gap-1"
+                className="flex flex-col items-stretch gap-1"
               >
-                <AssistantInput
-                  expanded={isAiMode}
-                  onFocus={() => {
-                    enterAiMode();
-                  }}
-                  onCollapse={() => {
-                    exitAiMode();
-                  }}
-                  onSubmit={handleSubmit}
-                />
+                {aiInteractionState === "complete" && completedPrompt && (
+                  <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-border">
+                    <span className="text-xs text-muted-foreground truncate flex-1">
+                      {completedPrompt.text}
+                    </span>
+                    <button
+                      onClick={handleUndo}
+                      className="btn-secondary btn-sm shrink-0"
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
 
-                <FormattingButtons
-                  className="transition-all duration-150"
-                  isAiMode={isAiMode}
-                />
+                <div className="flex items-center gap-1">
+                  <AssistantInput
+                    expanded={isAiMode}
+                    disabled={
+                      aiInteractionState === "loading" ||
+                      aiInteractionState === "streaming"
+                    }
+                    loading={
+                      aiInteractionState === "loading" ||
+                      aiInteractionState === "streaming"
+                    }
+                    placeholder={
+                      completedPrompt
+                        ? "Add follow up instructions"
+                        : "Ask AI to edit..."
+                    }
+                    value={inputValue}
+                    onChange={setInputValue}
+                    onFocus={() => {
+                      enterAiMode();
+                    }}
+                    onCollapse={() => {
+                      exitAiMode();
+                    }}
+                    onSubmit={handleSubmit}
+                  />
+
+                  <FormattingButtons
+                    className="transition-all duration-150"
+                    isAiMode={isAiMode}
+                  />
+                </div>
               </Toolbar.Root>
             </Tooltip.Provider>
           </Popover.Popup>

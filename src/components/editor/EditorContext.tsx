@@ -23,6 +23,16 @@ type TextFormatValue =
   | "bullet-list"
   | "ordered-list";
 
+type CompletedPrompt = {
+  text: string;
+  timestamp: number;
+};
+
+type UndoState = {
+  originalText: string;
+  range: { from: number; to: number };
+} | null;
+
 type EditorContextValue = {
   editor: Editor | null;
   editorRootRef: RefObject<HTMLDivElement | null>;
@@ -34,8 +44,10 @@ type EditorContextValue = {
   isAiMode: boolean;
   selectedText: string;
   // AI editing
-  runAiEdit: (instruction: string) => void;
-  isAiEditLoading: boolean;
+  submitAiInstruction: (instruction: string) => void;
+  undoLastEdit: () => void;
+  aiInteractionState: "idle" | "loading" | "streaming" | "complete";
+  completedPrompt: CompletedPrompt | null;
   aiEditError: unknown;
   resetAiEdit: () => void;
 };
@@ -69,6 +81,11 @@ export function EditorProvider({
   const [highlightedRange, setHighlightedRange] =
     useState<SelectionRange>(null);
   const [selectedText, setSelectedText] = useState("");
+
+  // AI interaction state
+  const [completedPrompt, setCompletedPrompt] =
+    useState<CompletedPrompt | null>(null);
+  const [undoState, setUndoState] = useState<UndoState>(null);
 
   // AI editing hook
   const aiEdit = useAiEdit(editor);
@@ -145,6 +162,12 @@ export function EditorProvider({
   // Exit AI mode: remove highlight mark
   const exitAiMode = useCallback(() => {
     setIsAiMode(false);
+
+    // Clear AI interaction state
+    aiEdit.reset();
+    setCompletedPrompt(null);
+    setUndoState(null);
+
     if (!editor || !highlightedRange) {
       setHighlightedRange(null);
       setSelectedText("");
@@ -161,7 +184,60 @@ export function EditorProvider({
 
     setHighlightedRange(null);
     setSelectedText("");
-  }, [editor, highlightedRange]);
+  }, [editor, highlightedRange, aiEdit]);
+
+  // Submit AI instruction: store undo state and start edit
+  const submitAiInstruction = useCallback(
+    (instruction: string) => {
+      if (!editor) return;
+
+      // Store undo state BEFORE running edit
+      const { from, to } = editor.state.selection;
+      const originalText = editor.state.doc.textBetween(from, to, " ");
+
+      setUndoState({
+        originalText,
+        range: { from, to },
+      });
+
+      // Store the instruction for history
+      setCompletedPrompt({
+        text: instruction,
+        timestamp: Date.now(),
+      });
+
+      // Start the edit (useAiEdit will handle state transitions)
+      aiEdit.run(instruction);
+    },
+    [editor, aiEdit]
+  );
+
+  // Undo last edit: restore original text
+  const undoLastEdit = useCallback(() => {
+    if (!editor || !undoState) return;
+
+    const { from } = undoState.range;
+    const to = from + undoState.originalText.length;
+
+    // Restore original text
+    editor
+      .chain()
+      .focus()
+      .deleteRange(undoState.range)
+      .insertContentAt(undoState.range.from, undoState.originalText)
+      .setTextSelection({ from, to })
+      .setMark("aiHighlight")
+      .run();
+
+    // Update highlighted range
+    setHighlightedRange({ from, to });
+    setSelectedText(undoState.originalText);
+
+    // Clear state
+    setUndoState(null);
+    setCompletedPrompt(null);
+    aiEdit.reset();
+  }, [editor, undoState, aiEdit]);
 
   const value = useMemo<EditorContextValue>(
     () => ({
@@ -174,8 +250,10 @@ export function EditorProvider({
       isAiMode,
       selectedText,
       // AI editing
-      runAiEdit: aiEdit.run,
-      isAiEditLoading: aiEdit.isLoading,
+      submitAiInstruction,
+      undoLastEdit,
+      aiInteractionState: aiEdit.aiInteractionState,
+      completedPrompt,
       aiEditError: aiEdit.error,
       resetAiEdit: aiEdit.reset,
     }),
@@ -188,8 +266,10 @@ export function EditorProvider({
       exitAiMode,
       isAiMode,
       selectedText,
-      aiEdit.run,
-      aiEdit.isLoading,
+      submitAiInstruction,
+      undoLastEdit,
+      aiEdit.aiInteractionState,
+      completedPrompt,
       aiEdit.error,
       aiEdit.reset,
     ]
