@@ -1,13 +1,19 @@
 import { openai } from "@ai-sdk/openai";
+// import { google } from "@ai-sdk/google";
 import { streamText, Output } from "ai";
 import { NextRequest } from "next/server";
-import { EditRequest, AiEditOutput } from "@/lib/ai/schemas";
+import { SentenceTokenizer } from "natural";
+import {
+    EditRequest,
+    AiEditOutput,
+    type BlockItem,
+} from "@/lib/ai/schemas";
 
 /**
  * POST /api/ai/edit
  *
  * Streams structured AI edits for a document based on user instruction.
- * Returns a streaming response consumable by useObject on the frontend.
+ * Server builds block map, sends it as first chunk, then streams AI response.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -15,16 +21,28 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         console.log("[BE] Received request:", {
             instruction: body.instruction,
-            docVersion: body.docVersion,
             selection: body.selection,
-            allowedRange: body.allowedRange,
-            regionsCount: body.regions?.length,
+            documentTextLength: body.documentText?.length,
         });
-        
+
         const request = EditRequest.parse(body);
 
+        const blockMapResult = request.blockMap
+            ? { items: request.blockMap }
+            : buildBlockMapFromText(request.documentText);
+        const { items } = blockMapResult;
+
+        console.log("[BE] Built block map:", {
+            itemsCount: items.length,
+            selection: request.selection,
+        });
+
         // Build the prompt with structured context
-        const prompt = buildPrompt(request);
+        const prompt = buildPrompt({
+            instruction: request.instruction,
+            selection: request.selection,
+            items,
+        });
         console.log("[BE] Built prompt, length:", prompt.length);
 
         // Stream structured output using AI SDK
@@ -44,12 +62,42 @@ export async function POST(req: NextRequest) {
         });
 
         console.log("[BE] Starting stream...");
-        // Return as text stream for useObject consumption
-        return result.toTextStreamResponse();
+
+        // Create combined stream: block map first, then AI response
+        const blockMapChunk = JSON.stringify({ blockMap: items }) + "\n";
+
+        const combinedStream = new ReadableStream({
+            async start(controller) {
+                try {
+                    // Send block map as first chunk
+                    controller.enqueue(new TextEncoder().encode(blockMapChunk));
+                    console.log("[BE] Sent block map");
+
+                    // Then stream AI response as-is
+                    const reader = result.textStream.getReader();
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        controller.enqueue(new TextEncoder().encode(value));
+                    }
+
+                    controller.close();
+                } catch (error) {
+                    console.error("[BE] Stream error:", error);
+                    controller.error(error);
+                }
+            },
+        });
+
+        return new Response(combinedStream, {
+            headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+                "Transfer-Encoding": "chunked",
+            },
+        });
     } catch (error) {
         console.error("[BE] Error in /api/ai/edit:", error);
 
-        // Return error as JSON for better client handling
         return new Response(
             JSON.stringify({
                 error: error instanceof Error ? error.message : "Unknown error",
@@ -63,76 +111,115 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Build a detailed prompt for the AI model
+ * Build block map from plain text using natural library
  */
-function buildPrompt(request: EditRequest): string {
-    const {
-        instruction,
-        docVersion,
-        selection,
-        allowedRange,
-        regions,
-        docText,
-    } = request;
+function buildBlockMapFromText(text: string) {
+    const tokenizer = new SentenceTokenizer([]);
+    const lines = text.split("\n").filter((l) => l.trim());
+    const items: BlockItem[] = [];
 
-    // Format regions for the prompt
-    const regionsText = regions
-        .map((r) => {
-            return `  - ID: "${r.id}"
-    Kind: ${r.kind}
-    Label: ${r.label || "N/A"}
-    Range: [${r.from}, ${r.to}]
-    Text: "${r.text}"`;
+    let currentPos = 0;
+    lines.forEach((line, lineIdx) => {
+        const blockNum = lineIdx + 1;
+        const sentenceTexts = tokenizer.tokenize(line);
+
+        if (!sentenceTexts || sentenceTexts.length === 0) {
+            items.push({
+                id: `block-${blockNum}.1`,
+                blockNum,
+                itemNum: 1,
+                blockType: "paragraph",
+                from: currentPos,
+                to: currentPos + line.length,
+                text: line,
+            });
+            currentPos += line.length + 1;
+            return;
+        }
+
+        let searchPos = 0;
+        sentenceTexts.forEach((sentText, sentIdx) => {
+            const sentStart = line.indexOf(sentText, searchPos);
+
+            if (sentStart !== -1) {
+                const sentEnd = sentStart + sentText.length;
+
+                items.push({
+                    id: `block-${blockNum}.${sentIdx + 1}`,
+                    blockNum,
+                    itemNum: sentIdx + 1,
+                    blockType: "paragraph",
+                    from: currentPos + sentStart,
+                    to: currentPos + sentEnd,
+                    text: sentText,
+                });
+
+                searchPos = sentEnd;
+            }
+        });
+
+        currentPos += line.length + 1;
+    });
+
+    return { items };
+}
+
+/**
+ * Build a concise prompt for the AI model
+ */
+function buildPrompt(params: {
+    instruction: string;
+    selection?: { from: number; to: number; text: string };
+    items: BlockItem[];
+}): string {
+    const { instruction, selection, items } = params;
+
+    const itemsText = items
+        .map((item) => {
+            const typeLabel =
+                item.blockType === "heading"
+                    ? `heading-${item.headingLevel ?? 1}`
+                    : item.blockType === "bulletList"
+                    ? "bullet"
+                    : item.blockType === "orderedList"
+                    ? "numbered"
+                    : "paragraph";
+            return `${item.id} [${typeLabel}]: "${item.text}"`;
         })
-        .join("\n\n");
+        .join("\n");
 
-    return `You are a precise document editor. Make targeted edits to a document based on the user's instruction.
-
-**CRITICAL RULES:**
-1. Echo the EXACT docVersion: "${docVersion}"
-2. ALL edits MUST be within: [${allowedRange.from}, ${allowedRange.to}]
-3. Prefer region-offset targets when possible (more stable)
-4. Keep edits minimal (1-3 operations)
-5. Set complete=true when finished
+    return `You are a document editor. Apply the user's instruction using markdown formatting.
 
 **USER INSTRUCTION:**
 ${instruction}
 
-**DOCUMENT CONTEXT:**
+${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}
+**AVAILABLE ITEMS:**
+${itemsText}
 
-Document Version: ${docVersion}
-${selection ? `\nCurrent Selection: [${selection.from}, ${selection.to}]\nSelected Text: "${selection.text}"` : "No text selected"}
+**EXAMPLES:**
 
-Allowed Edit Range: [${allowedRange.from}, ${allowedRange.to}]
+"make block-2.1 bold"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-2.1"}, "operation": {"type": "replace", "replacement": "**text here**"}}], "complete": true}
 
-**AVAILABLE REGIONS (use these IDs for region-offset targets):**
+"insert a sentence after block-1.2"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-1.2"}, "operation": {"type": "insert-item", "position": "after", "items": ["New sentence."]}}], "complete": true}
 
-${regionsText}
+"insert a level 2 heading before block-3.1"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-3.1"}, "operation": {"type": "insert-block", "position": "before", "blockType": "heading", "headingLevel": 2, "items": ["New heading"]}}], "complete": true}
 
-${docText ? `\n**FULL DOCUMENT TEXT:**\n${docText}\n` : ""}
+"delete block-2.3"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-2.3"}, "operation": {"type": "delete-item"}}], "complete": true}
 
-**OUTPUT FORMAT:**
+"delete the block containing block-4.1"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-4.1"}, "operation": {"type": "delete-block"}}], "complete": true}
 
-{
-  "docVersion": "${docVersion}",
-  "edits": [
-    {
-      "target": {
-        "kind": "region-offset" or "range",
-        // For region-offset: provide regionId, startOffset, endOffset (others null)
-        // For range: provide from, to (others null)
-      },
-      "replacement": "new text here"
-    }
-  ],
-  "complete": true
+**RULES:**
+1. Always include an "operation" object with a "type".
+2. Paragraphs/headings: Use inline markdown (**bold**, *italic*, ~~strike~~, \`code\`).
+3. Headings: For replace operations, ALWAYS use # prefix (#, ##, ###).
+4. List items: Inline markdown only (no bullets, already in list).
+5. insert-item: "items" are sentences for paragraphs/headings, list items for lists.
+6. insert-block: set "blockType" and "headingLevel" (use null when not heading).
+7. Always target items using "block-item" with an itemId`;
 }
-
-**STRATEGY:**
-
-1. If there's a selection, focus edits on that
-2. Use region-offset when the edit aligns with a region
-3. Use range for cross-region or precise edits
-4. Minimize edits - combine when possible`;
-}
-

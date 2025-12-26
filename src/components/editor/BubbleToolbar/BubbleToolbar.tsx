@@ -87,6 +87,9 @@ export default function BubbleToolbar() {
 
   if (!editor) return null;
 
+  const selection = editor.state.selection;
+  const showFormattingButtons = selection.$from.sameParent(selection.$to);
+
   return (
     <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <span
@@ -128,7 +131,7 @@ export default function BubbleToolbar() {
                 className="flex flex-col items-stretch gap-1"
               >
                 {aiInteractionState === "complete" && completedPrompt && (
-                  <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-border">
+                  <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-border max-w-[316px]">
                     <span className="text-xs text-muted-foreground truncate flex-1">
                       {completedPrompt.text}
                     </span>
@@ -168,10 +171,12 @@ export default function BubbleToolbar() {
                     onSubmit={handleSubmit}
                   />
 
-                  <FormattingButtons
-                    className="transition-all duration-150"
-                    isAiMode={isAiMode}
-                  />
+                  {showFormattingButtons && (
+                    <FormattingButtons
+                      className="transition-all duration-150"
+                      isAiMode={isAiMode}
+                    />
+                  )}
                 </div>
               </Toolbar.Root>
             </Tooltip.Provider>

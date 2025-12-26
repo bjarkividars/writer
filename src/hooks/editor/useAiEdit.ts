@@ -1,13 +1,10 @@
 import { useRef, useState, useCallback } from "react";
 import type { Editor } from "@tiptap/react";
-import {
-    EditRequest,
-    type Region,
-} from "@/lib/ai/schemas";
-import {
-    buildRegionMap,
-    generateDocVersion,
-} from "@/lib/ai";
+import { buildBlockMap } from "@/lib/ai/blockMap";
+import type { BlockItem, BlockType } from "@/lib/ai/schemas";
+import { EditRequest } from "@/lib/ai/schemas";
+import type { EditState } from "@/hooks/editor/aiEdit/types";
+import { dispatchOperation } from "@/hooks/editor/aiEdit/dispatchOperation";
 
 type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
 
@@ -17,361 +14,408 @@ type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
 export type UseAiEditResult = ReturnType<typeof useAiEdit>;
 
 /**
- * Simple state tracking for a single edit during streaming
- */
-type EditState = {
-    targetSeen: boolean;
-    targetRange: { from: number; to: number } | null;
-    rangeDeleted: boolean;
-    replacementSeen: string;
-};
-
-/**
  * Type guard to check if value is an array
  */
 function isArray(value: unknown): value is unknown[] {
-    return Array.isArray(value);
+  return Array.isArray(value);
 }
 
 /**
  * Type guard for parsed edit data
  */
-function isValidEdit(value: unknown): value is { target?: unknown; replacement?: unknown } {
-    return typeof value === "object" && value !== null;
+function isValidEdit(
+  value: unknown
+): value is { target?: unknown; operation?: unknown } {
+  return typeof value === "object" && value !== null;
 }
 
 /**
  * Type guard for edit target
  */
-function hasTargetFields(target: unknown): target is {
-    kind?: unknown;
-    from?: unknown;
-    to?: unknown;
-    regionId?: unknown;
-    startOffset?: unknown;
-    endOffset?: unknown;
+function hasTargetFields(
+  target: unknown
+): target is {
+  kind?: unknown;
+  itemId?: unknown;
 } {
-    return typeof target === "object" && target !== null;
+  return typeof target === "object" && target !== null;
 }
 
 /**
  * Hook for AI-powered document editing with streaming
  *
- * Simplified approach: manual stream parsing, delete ranges immediately,
- * insert replacement text as it streams in incrementally.
+ * Server sends block map as first chunk, then streams AI response.
+ * Client resolves block items using the received map.
  */
 export function useAiEdit(editor: Editor | null) {
-    // Store the request context for target resolution
-    const requestContextRef = useRef<{
-        docVersion: string;
-        regions: Region[];
-        allowedRange: { from: number; to: number };
-    } | null>(null);
+  // Store block map from server
+  const blockMapRef = useRef<BlockItem[]>([]);
 
-    // Simple state tracking per edit
-    const editsState = useRef<Map<number, EditState>>(new Map());
-    const abortControllerRef = useRef<AbortController | null>(null);
+  // Simple state tracking per edit
+  const editsState = useRef<Map<number, EditState>>(new Map());
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-    // React state for UI
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [aiInteractionState, setAiInteractionState] = useState<AiInteractionState>("idle");
-    const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
+  // React state for UI
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [aiInteractionState, setAiInteractionState] =
+    useState<AiInteractionState>("idle");
+  const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
 
-    /**
-     * Extract edits from partial JSON, including incomplete replacement text
-     */
-    const tryParsePartialJSON = useCallback((text: string): { edits?: unknown[] } | null => {
-        // Try complete JSON parse first
+  /**
+   * Resolve edit target to absolute positions using block map
+   */
+  const resolveTarget = useCallback(
+    (
+      target: unknown
+    ): {
+      from: number;
+      to: number;
+      blockType?: BlockType;
+      headingLevel?: number;
+      blockNum?: number;
+    } | null => {
+      if (!hasTargetFields(target)) return null;
+
+      if (
+        target.kind === "block-item" &&
+        typeof target.itemId === "string" &&
+        target.itemId !== ""
+      ) {
+        const item = blockMapRef.current.find((i) => i.id === target.itemId);
+        if (!item) {
+          console.warn(`[AI Edit] Block item not found: ${target.itemId}`);
+          return null;
+        }
+        return {
+          from: item.from,
+          to: item.to,
+          blockType: item.blockType,
+          headingLevel: item.headingLevel,
+          blockNum: item.blockNum,
+        };
+      }
+
+      return null;
+    },
+    []
+  );
+
+  /**
+   * Extract edits from partial JSON, including incomplete replacement text
+   */
+  const tryParsePartialJSON = useCallback(
+    (text: string): { edits?: unknown[] } | null => {
+      console.log("[STREAM] Trying to parse partial JSON:", text);
+      // Try complete JSON parse first
+      try {
+        const parsed = JSON.parse(text) as unknown;
+        if (typeof parsed === "object" && parsed !== null && "edits" in parsed) {
+          const editsValue = (parsed as { edits: unknown }).edits;
+          if (isArray(editsValue)) {
+            return { edits: editsValue };
+          }
+        }
+      } catch {
+        // Fall through to partial extraction
+      }
+
+      // Extract partial edits using regex (replace only)
+      const edits: unknown[] = [];
+
+      // Find the start of each edit - look for target with kind field
+      const editMatches = text.matchAll(/\{"target":\s*\{([^}]+)\}/g);
+
+      for (const editMatch of editMatches) {
         try {
-            const parsed = JSON.parse(text) as unknown;
-            if (typeof parsed === "object" && parsed !== null && "edits" in parsed) {
-                const editsValue = (parsed as { edits: unknown }).edits;
-                if (isArray(editsValue)) {
-                    return { edits: editsValue };
-                }
+          const targetJson = `{${editMatch[1]}}`;
+          const editStartPos = editMatch.index!;
+
+          // Parse the target
+          const target = JSON.parse(targetJson) as unknown;
+
+          // Extract replacement text after this target
+          const afterTarget = text.substring(editStartPos);
+          const typeMatch = afterTarget.match(/"type"\s*:\s*"([^"]+)"/);
+          if (!typeMatch || typeMatch[1] !== "replace") {
+            continue;
+          }
+
+          const replacementMatch = afterTarget.match(/"replacement"\s*:\s*"([^"]*)"/);
+
+          let replacement = "";
+          if (replacementMatch) {
+            // Found complete replacement with closing quote
+            replacement = replacementMatch[1];
+          } else {
+            // Look for incomplete replacement without closing quote
+            const incompleteMatch = afterTarget.match(/"replacement"\s*:\s*"([^"]*)/);
+            if (incompleteMatch) {
+              replacement = incompleteMatch[1];
             }
+          }
+
+          edits.push({
+            target,
+            operation: {
+              type: "replace",
+              replacement,
+            },
+          });
         } catch {
-            // Fall through to partial extraction
+          // Skip invalid matches
+        }
+      }
+
+      return edits.length > 0 ? { edits } : null;
+    },
+    []
+  );
+
+  /**
+   * Process edits incrementally as they stream in
+   */
+  const processEdits = useCallback(
+    (edits: unknown[]) => {
+      if (!editor) return;
+
+      let appliedAnyEdit = false;
+
+      edits.forEach((edit, index) => {
+        if (!isValidEdit(edit)) return;
+
+        let state = editsState.current.get(index);
+
+        // STEP 1: Resolve and store target (DON'T delete yet!)
+        if (!state?.targetSeen && edit.target !== undefined) {
+          const range = resolveTarget(edit.target);
+          if (range) {
+            const itemId =
+              hasTargetFields(edit.target) &&
+              typeof edit.target.itemId === "string"
+                ? edit.target.itemId
+                : undefined;
+
+            // Store range without deleting
+            editsState.current.set(index, {
+              targetSeen: true,
+              targetRange: { from: range.from, to: range.to },
+              blockType: range.blockType,
+              headingLevel: range.headingLevel,
+              blockNum: range.blockNum,
+              rangeDeleted: false, // Haven't deleted original yet
+              replacementSeen: "",
+              replacementLength: 0,
+              itemId,
+              operationApplied: false,
+            });
+
+            state = editsState.current.get(index)!;
+          }
         }
 
-        // Extract partial edits using regex
-        const edits: unknown[] = [];
+        if (!state?.targetSeen || !state.targetRange) return;
 
-        // Find the start of each edit
-        const editMatches = text.matchAll(/\{"target":\s*(\{[^}]+\})/g);
-
-        for (const editMatch of editMatches) {
-            try {
-                const targetJson = editMatch[1];
-                const editStartPos = editMatch.index!;
-
-                // Parse the target
-                const target = JSON.parse(targetJson) as unknown;
-
-                // Extract replacement text after this target
-                const afterTarget = text.substring(editStartPos);
-                const replacementMatch = afterTarget.match(/"replacement"\s*:\s*"([^"]*)"/);
-
-                let replacement = "";
-                if (replacementMatch) {
-                    // Found complete replacement with closing quote
-                    replacement = replacementMatch[1];
-                } else {
-                    // Look for incomplete replacement without closing quote
-                    const incompleteMatch = afterTarget.match(/"replacement"\s*:\s*"([^"]*)/);
-                    if (incompleteMatch) {
-                        replacement = incompleteMatch[1];
-                    }
-                }
-
-                edits.push({
-                    target,
-                    replacement,
-                });
-            } catch {
-                // Skip invalid matches
-            }
-        }
-
-        return edits.length > 0 ? { edits } : null;
-    }, []);
-
-    /**
-     * Resolve edit target to absolute positions
-     */
-    const resolveTarget = useCallback((target: unknown): { from: number; to: number } | null => {
-        if (!hasTargetFields(target)) return null;
-
-        // Range target
-        if (
-            target.kind === "range" &&
-            typeof target.from === "number" &&
-            typeof target.to === "number"
-        ) {
-            return { from: target.from, to: target.to };
-        }
-
-        // Region-offset target
-        if (
-            target.kind === "region-offset" &&
-            typeof target.regionId === "string" &&
-            typeof target.startOffset === "number" &&
-            typeof target.endOffset === "number"
-        ) {
-            const region = requestContextRef.current?.regions.find(
-                (r) => r.id === target.regionId
-            );
-            if (!region) return null;
-
-            return {
-                from: region.from + target.startOffset,
-                to: region.from + target.endOffset,
-            };
-        }
-
-        return null;
-    }, []);
-
-    /**
-     * Process edits incrementally as they stream in
-     */
-    const processEdits = useCallback((edits: unknown[]) => {
-        if (!editor) return;
-
-        let appliedAnyEdit = false;
-
-        edits.forEach((edit, index) => {
-            if (!isValidEdit(edit)) return;
-
-            let state = editsState.current.get(index);
-
-            // STEP 1: Delete range on first sight of valid target
-            if (!state?.targetSeen && edit.target !== undefined) {
-                const range = resolveTarget(edit.target);
-                if (range) {
-                    // Delete the range immediately
-                    editor.chain().focus().deleteRange(range).run();
-
-                    // Track it
-                    editsState.current.set(index, {
-                        targetSeen: true,
-                        targetRange: range,
-                        rangeDeleted: true,
-                        replacementSeen: "",
-                    });
-
-                    state = editsState.current.get(index)!;
-                    appliedAnyEdit = true;
-                }
-            }
-
-            // STEP 2: Insert new replacement characters
-            if (state?.rangeDeleted && typeof edit.replacement === "string") {
-                const newText = edit.replacement;
-                const oldText = state.replacementSeen;
-
-                if (newText.length > oldText.length) {
-                    // New characters arrived - insert them
-                    const newChars = newText.slice(oldText.length);
-                    const insertPos = state.targetRange!.from + oldText.length;
-
-                    editor.chain().focus().insertContentAt(insertPos, newChars).run();
-
-                    // Update state
-                    state.replacementSeen = newText;
-                    appliedAnyEdit = true;
-                }
-            }
+        const applied = dispatchOperation({
+          editor,
+          state,
+          operation: edit.operation,
+          blockMap: blockMapRef.current,
+          editsState: editsState.current,
         });
 
-        // Notify streaming started on first edit
-        if (appliedAnyEdit && !hasStartedStreaming) {
-            setHasStartedStreaming(true);
-            setAiInteractionState("streaming");
+        if (applied) {
+          appliedAnyEdit = true;
         }
-    }, [editor, resolveTarget, hasStartedStreaming]);
+      });
 
-    /**
-     * Stream edits from the API
-     */
-    const streamEdits = useCallback(async (payload: EditRequest) => {
-        setIsLoading(true);
-        setError(null);
-        setHasStartedStreaming(false);
-        setAiInteractionState("loading");
-        editsState.current.clear();
+      // Notify streaming started on first edit
+      if (appliedAnyEdit && !hasStartedStreaming) {
+        setHasStartedStreaming(true);
+        setAiInteractionState("streaming");
+      }
+    },
+    [editor, resolveTarget, hasStartedStreaming]
+  );
 
-        // Lock editor
-        if (editor) {
-            editor.setEditable(false);
+  /**
+   * Stream edits from the API
+   */
+  const streamEdits = useCallback(
+    async (payload: EditRequest) => {
+      setIsLoading(true);
+      setError(null);
+      setHasStartedStreaming(false);
+      setAiInteractionState("loading");
+      editsState.current.clear();
+
+      // Lock editor
+      if (editor) {
+        editor.setEditable(false);
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      try {
+        const response = await fetch("/api/ai/edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
+        if (!response.body) {
+          throw new Error("No response body");
+        }
 
-        try {
-            const response = await fetch("/api/ai/edit", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-                signal: controller.signal,
-            });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let blockMapReceived = false;
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse block map from first chunk
+          if (!blockMapReceived && buffer.includes("\n")) {
+            const lines = buffer.split("\n");
+            const firstLine = lines[0];
+
+            if (firstLine.includes("blockMap")) {
+              try {
+                const mapData = JSON.parse(firstLine) as { blockMap: BlockItem[] };
+                blockMapRef.current = mapData.blockMap;
+                console.log(
+                  "[AI Edit] Received block map:",
+                  mapData.blockMap.length,
+                  "items"
+                );
+
+                // Remove block map from buffer
+                buffer = lines.slice(1).join("\n");
+                blockMapReceived = true;
+              } catch (err) {
+                console.error("[AI Edit] Failed to parse block map:", err);
+              }
             }
+          }
 
-            if (!response.body) {
-                throw new Error("No response body");
+          // Try to parse accumulated buffer and process edits
+          if (blockMapReceived) {
+            const parsed = tryParsePartialJSON(buffer);
+            if (parsed && parsed.edits) {
+              processEdits(parsed.edits);
             }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-
-                // Try to parse accumulated buffer and process edits
-                const parsed = tryParsePartialJSON(buffer);
-                if (parsed && parsed.edits) {
-                    processEdits(parsed.edits);
-                }
-            }
-        } catch (err) {
-            if (err instanceof Error && err.name !== "AbortError") {
-                console.error("[AI Edit] Stream error:", err);
-                setError(err as Error);
-            }
-        } finally {
-            setIsLoading(false);
-            if (editor) {
-                editor.setEditable(true);
-            }
-            abortControllerRef.current = null;
-            setAiInteractionState("complete");
+          }
         }
-    }, [editor, tryParsePartialJSON, processEdits]);
-
-    /**
-     * Run an AI edit based on an instruction
-     */
-    const run = useCallback((instruction: string) => {
-        if (!editor) {
-            console.error("[AI Edit] Editor not available");
-            return;
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("[AI Edit] Stream error:", err);
+          setError(err as Error);
         }
-
-        try {
-            // Build the request context
-            const docVersion = generateDocVersion(editor.state.doc);
-            const { regions, allowedRange, selection } = buildRegionMap(editor);
-            const docText = editor.getText();
-
-            // Store context for later resolution
-            requestContextRef.current = {
-                docVersion,
-                regions,
-                allowedRange,
-            };
-
-            // Build and validate payload
-            const payload = EditRequest.parse({
-                instruction,
-                docVersion,
-                selection,
-                allowedRange,
-                regions,
-                docText,
-            });
-
-            // Start streaming
-            streamEdits(payload);
-        } catch (err) {
-            console.error("[AI Edit] Failed to build request:", err);
-            setError(err as Error);
-        }
-    }, [editor, streamEdits]);
-
-    /**
-     * Stop streaming
-     */
-    const stop = useCallback(() => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            abortControllerRef.current = null;
-        }
-
+      } finally {
         setIsLoading(false);
-        setAiInteractionState("idle");
-
         if (editor) {
-            editor.setEditable(true);
+          editor.setEditable(true);
         }
-    }, [editor]);
+        abortControllerRef.current = null;
+        setAiInteractionState("complete");
+      }
+    },
+    [editor, tryParsePartialJSON, processEdits]
+  );
 
-    /**
-     * Reset the hook state
-     */
-    const reset = useCallback(() => {
-        stop();
-        editsState.current.clear();
-        requestContextRef.current = null;
-        setError(null);
-        setAiInteractionState("idle");
-    }, [stop]);
+  /**
+   * Run an AI edit based on an instruction
+   */
+  const run = useCallback(
+    (instruction: string) => {
+      if (!editor) {
+        console.error("[AI Edit] Editor not available");
+        return;
+      }
 
-    return {
-        run,
-        isLoading,
-        error,
-        reset,
-        stop,
-        aiInteractionState,
-    };
+      try {
+        const { state } = editor;
+        const { from, to, empty } = state.selection;
+
+        // Get document text
+        const documentText = editor.getText();
+        const { items: blockMapItems } = buildBlockMap(editor);
+
+        // Build selection info
+        const selection =
+          !empty && from !== to
+            ? {
+                from,
+                to,
+                text: state.doc.textBetween(from, to, " "),
+              }
+            : undefined;
+
+        blockMapRef.current = blockMapItems;
+
+        // Build and validate payload
+        const payload = EditRequest.parse({
+          instruction,
+          selection,
+          documentText,
+          blockMap: blockMapItems,
+        });
+
+        // Start streaming
+        streamEdits(payload);
+      } catch (err) {
+        console.error("[AI Edit] Failed to build request:", err);
+        setError(err as Error);
+      }
+    },
+    [editor, streamEdits]
+  );
+
+  /**
+   * Stop streaming
+   */
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    setIsLoading(false);
+    setAiInteractionState("idle");
+
+    if (editor) {
+      editor.setEditable(true);
+    }
+  }, [editor]);
+
+  /**
+   * Reset the hook state
+   */
+  const reset = useCallback(() => {
+    stop();
+    editsState.current.clear();
+    blockMapRef.current = [];
+    setError(null);
+    setAiInteractionState("idle");
+  }, [stop]);
+
+  return {
+    run,
+    isLoading,
+    error,
+    reset,
+    stop,
+    aiInteractionState,
+  };
 }

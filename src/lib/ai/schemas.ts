@@ -1,164 +1,201 @@
 import { z } from "zod";
 
-/**
- * Region kind - type of document region
- */
-export const RegionKind = z.enum([
-  "selection",
+export const BlockTypeSchema = z.enum([
   "paragraph",
   "heading",
-  "listItem",
-  "section",
+  "bulletList",
+  "orderedList",
 ]);
 
-export type RegionKind = z.infer<typeof RegionKind>;
+export type BlockType = z.infer<typeof BlockTypeSchema>;
 
-/**
- * Document region with stable boundaries
- */
-export const Region = z.object({
+export const BlockItemSchema = z
+  .object({
   id: z.string(),
-  kind: RegionKind,
+  blockNum: z.number().int().min(1),
+  itemNum: z.number().int().min(1),
+  blockType: BlockTypeSchema,
+  headingLevel: z.number().int().min(1).max(3).optional(),
   from: z.number().int().min(0),
   to: z.number().int().min(0),
   text: z.string(),
-  label: z.string().optional(),
-});
+  })
+  .strict();
 
-export type Region = z.infer<typeof Region>;
+export type BlockItem = z.infer<typeof BlockItemSchema>;
 
 /**
- * Edit request payload - what we send to the AI API
+ * Sentence with stable ID for AI targeting
  */
-export const EditRequest = z.object({
+export const Sentence = z
+  .object({
+  id: z.string().describe("Sentence ID like '1.1', '1.2' etc."),
+  paragraphNum: z.number().int().min(1),
+  sentenceNum: z.number().int().min(1),
+  from: z.number().int().min(0),
+  to: z.number().int().min(0),
+  text: z.string(),
+  })
+  .strict();
+
+export type Sentence = z.infer<typeof Sentence>;
+
+/**
+ * Edit request payload - what we send to the AI API (from client)
+ */
+export const EditRequest = z
+  .object({
   instruction: z.string(),
-  docVersion: z.string(),
   selection: z
     .object({
       from: z.number().int().min(0),
       to: z.number().int().min(0),
       text: z.string(),
     })
+    .strict()
     .optional(),
-  allowedRange: z.object({
-    from: z.number().int().min(0),
-    to: z.number().int().min(0),
-  }),
-  regions: z.array(Region),
-  docText: z.string().optional(),
-});
+  documentText: z.string(),
+  blockMap: z.array(BlockItemSchema).optional(),
+  })
+  .strict();
 
 export type EditRequest = z.infer<typeof EditRequest>;
 
 /**
- * Edit target - flattened for OpenAI structured output compatibility
- * 
- * OpenAI doesn't support oneOf and requires all fields to be in the required array.
- * We use nullable fields - check 'kind' to determine which fields to use.
+ * Edit target for AI response (uses block item IDs)
+ *
+ * Note: Using a single object with required fields to satisfy OpenAI's
+ * structured output requirements (no optional fields, no oneOf)
  */
-export const EditTarget = z
+export const AiEditTarget = z
   .object({
-    kind: z
-      .enum(["range", "region-offset"])
-      .describe(
-        'Type of target: "range" for absolute positions, "region-offset" for positions relative to a region'
-      ),
-    // For kind="range" - provide absolute document positions (set others to null)
-    from: z
-      .number()
-      .int()
-      .min(0)
-      .nullable()
-      .describe("Start position (required when kind=range, null otherwise)"),
-    to: z
-      .number()
-      .int()
-      .min(0)
-      .nullable()
-      .describe("End position (required when kind=range, null otherwise)"),
-    // For kind="region-offset" - provide region ID and offsets (set range fields to null)
-    regionId: z
-      .string()
-      .nullable()
-      .describe(
-        "ID of the region from the provided regions list (required when kind=region-offset, null otherwise)"
-      ),
-    startOffset: z
-      .number()
-      .int()
-      .min(0)
-      .nullable()
-      .describe(
-        "Start offset within the region text (required when kind=region-offset, null otherwise)"
-      ),
-    endOffset: z
-      .number()
-      .int()
-      .min(0)
-      .nullable()
-      .describe(
-        "End offset within the region text (required when kind=region-offset, null otherwise)"
-      ),
+  kind: z
+    .enum(["block-item"])
+    .describe(
+      "Target type: 'block-item' to replace a specific block item by ID"
+    ),
+  itemId: z
+    .string()
+    .describe(
+      "Item ID when kind='block-item' (e.g., 'block-2.3')."
+    ),
   })
-  .describe(
-    "Target location for the edit. Use region-offset when possible for stability."
-  );
+  .strict();
 
-export type EditTarget = z.infer<typeof EditTarget>;
+// TypeScript type remains discriminated union for type safety
+export type AiEditTarget =
+  | { kind: "block-item"; itemId: string };
+
+export const ReplaceOperation = z
+  .object({
+  type: z.literal("replace"),
+  replacement: z.string(),
+  })
+  .strict();
+
+export const InsertItemOperation = z
+  .object({
+  type: z.literal("insert-item"),
+  position: z.enum(["before", "after"]),
+  items: z.array(z.string()),
+  })
+  .strict();
+
+export const InsertBlockOperation = z
+  .object({
+  type: z.literal("insert-block"),
+  position: z.enum(["before", "after"]),
+  blockType: BlockTypeSchema,
+  headingLevel: z.number().int().min(1).max(3).nullable(),
+  items: z.array(z.string()),
+  })
+  .strict();
+
+export const DeleteItemOperation = z
+  .object({
+  type: z.literal("delete-item"),
+  })
+  .strict();
+
+export const DeleteBlockOperation = z
+  .object({
+  type: z.literal("delete-block"),
+  })
+  .strict();
+
+export const AiEditOperation = z.union([
+  ReplaceOperation,
+  InsertItemOperation,
+  InsertBlockOperation,
+  DeleteItemOperation,
+  DeleteBlockOperation,
+  
+]);
+
+export type AiEditOperation = z.infer<typeof AiEditOperation>;
 
 /**
- * Single edit operation from the model
+ * Resolved edit target (absolute positions for client)
  */
-export const EditOp = z
+export const ResolvedEditTarget = z
   .object({
-    target: EditTarget,
-    replacement: z
-      .string()
-      .describe("The new text to insert at the target location"),
+  from: z.number().int().min(0),
+  to: z.number().int().min(0),
   })
-  .describe("A single text replacement operation")
-  .refine(
-    (op) => {
-      if (op.target.kind === "range") {
-        return (
-          op.target.to !== null &&
-          op.target.from !== null &&
-          op.target.to >= op.target.from
-        );
-      }
-      return (
-        op.target.endOffset !== null &&
-        op.target.startOffset !== null &&
-        op.target.endOffset >= op.target.startOffset
-      );
-    },
-    {
-      message: "End position must be >= start position and fields must not be null",
-    }
-  );
+  .strict();
 
-export type EditOp = z.infer<typeof EditOp>;
+export type ResolvedEditTarget = z.infer<typeof ResolvedEditTarget>;
 
 /**
- * AI edit output - streamed response from the API
+ * Single edit operation from AI (with block item IDs + structured operation)
+ */
+export const AiEditOp = z
+  .object({
+  target: AiEditTarget,
+  operation: AiEditOperation,
+  })
+  .strict();
+
+export type AiEditOp = z.infer<typeof AiEditOp>;
+
+/**
+ * Resolved edit operation (for client, with absolute positions)
+ */
+export const ResolvedEditOp = z
+  .object({
+  target: ResolvedEditTarget,
+  operation: AiEditOperation,
+  })
+  .strict();
+
+export type ResolvedEditOp = z.infer<typeof ResolvedEditOp>;
+
+/**
+ * AI edit output - response from LLM (with block item IDs)
  */
 export const AiEditOutput = z
   .object({
-    docVersion: z
-      .string()
-      .describe(
-        "Echo the exact docVersion from the request (for staleness detection)"
-      ),
-    edits: z
-      .array(EditOp)
-      .describe(
-        "Array of edit operations to apply. Keep minimal (1-3 edits). All edits must be within the provided allowedRange. Can be empty array if no edits yet."
-      ),
-    complete: z
-      .boolean()
-      .describe("Set to true when all edits are finalized and ready to apply"),
+  edits: z
+    .array(AiEditOp)
+    .describe(
+      "Array of edit operations to apply. Keep minimal (1-3 edits). Can be empty array if no edits yet."
+    ),
+  complete: z
+    .boolean()
+    .describe("Set to true when all edits are finalized and ready to apply"),
   })
-  .describe("Response containing document edits based on the user's instruction");
+  .strict();
 
 export type AiEditOutput = z.infer<typeof AiEditOutput>;
 
+/**
+ * Resolved edit response - what we send to the client (with absolute positions)
+ */
+export const ResolvedEditResponse = z
+  .object({
+  edits: z.array(ResolvedEditOp),
+  complete: z.boolean(),
+  })
+  .strict();
+
+export type ResolvedEditResponse = z.infer<typeof ResolvedEditResponse>;

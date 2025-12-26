@@ -7,40 +7,44 @@
 
 // Schemas
 export {
-  RegionKind,
-  Region,
+  Sentence,
   EditRequest,
-  EditTarget,
-  EditOp,
+  AiEditTarget,
+  AiEditOp,
   AiEditOutput,
+  AiEditOperation,
 } from "./schemas";
 
 export type {
-  RegionKind as RegionKindType,
-  Region as RegionType,
+  BlockItem as BlockItemType,
+  BlockType as BlockTypeType,
+  Sentence as SentenceType,
   EditRequest as EditRequestType,
-  EditTarget as EditTargetType,
-  EditOp as EditOpType,
+  AiEditTarget as AiEditTargetType,
+  AiEditOp as AiEditOpType,
   AiEditOutput as AiEditOutputType,
+  AiEditOperation as AiEditOperationType,
 } from "./schemas";
 
-// Region map builder
-export { buildRegionMap } from "./regionMap";
-export type { RegionMapResult } from "./regionMap";
+// Block map builder
+export { buildBlockMap } from "./blockMap";
+export type { BlockMapResult } from "./blockMap";
 
-// Document version tracking
+// Sentence map builder
+export { buildSentenceMap } from "./sentenceMap";
+export type { SentenceMapResult, Sentence as SentenceData } from "./sentenceMap";
+
+// Markdown parser
+export {
+  parseMarkdownToTipTap,
+  parseMarkdownForBlock,
+  isMarkdownComplete,
+} from "./markdownParser";
+export type { TipTapNode } from "./markdownParser";
+
+// Document version tracking (still useful for debugging/logging)
 export {
   generateDocVersion,
   validateDocVersion,
   getVersionTimestamp,
 } from "./docVersion";
-
-// Edit resolver
-export {
-  resolveEditTarget,
-  resolveAllEdits,
-  sortEditsDescending,
-} from "./resolveEdits";
-
-export type { ResolvedRange, ResolveResult } from "./resolveEdits";
-

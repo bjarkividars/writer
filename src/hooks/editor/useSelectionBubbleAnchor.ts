@@ -110,11 +110,6 @@ export function useSelectionBubbleAnchor(
         return;
       }
 
-      if ($from.start(1) !== $to.start(1)) {
-        setOpen(false);
-        return;
-      }
-
       if (updatePosition()) {
         setOpen(true);
       } else {

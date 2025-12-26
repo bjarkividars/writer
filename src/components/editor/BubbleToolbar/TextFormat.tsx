@@ -85,7 +85,7 @@ export default function TextFormat({ editor }: TextFormatProps) {
               event.preventDefault();
               props.onMouseDown?.(event);
             }}
-            className="flex h-7 items-center gap-1 rounded px-2 text-xs font-medium text-foreground/70 transition-colors hover:bg-hover hover:text-foreground data-pressed:bg-hover data-pressed:text-foreground"
+            className="flex h-7 items-center gap-1 rounded px-2 text-xs font-medium text-foreground/70 transition-colors hover:bg-hover hover:text-foreground data-pressed:bg-hover data-pressed:text-foreground cursor-pointer"
           >
             <span className="max-w-36 truncate">{currentLabel}</span>
             <ChevronDown className="h-3 w-3" />
