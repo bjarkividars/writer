@@ -2,9 +2,12 @@ import { useEditorContext } from "@/components/editor/EditorContext";
 import ChatInput from "./ChatInput";
 import { ModelMessage, UserMessage } from "./ChatMessage";
 import { useChatContext } from "./ChatContext";
+import { useSessionContext } from "@/components/session/SessionContext";
+import { appendMessage } from "@/lib/api/client";
 
 export default function Chat() {
-  const { submitAiInstruction, aiInteractionState } = useEditorContext();
+  const { submitAiInstruction, aiInteractionState, lastAiMode } =
+    useEditorContext();
   const {
     messages,
     addUserMessage,
@@ -12,12 +15,48 @@ export default function Chat() {
     setMessageContent,
     finishMessage,
   } = useChatContext();
+  const { ensureSession } = useSessionContext();
+  const isChatAi = lastAiMode === "chat";
+
+  const renderModelContent = (message: {
+    content: string;
+    streaming: boolean;
+  }) => {
+    const trimmed = message.content.trim();
+    if (!message.streaming || trimmed.length > 0) {
+      return message.content;
+    }
+
+    if (aiInteractionState === "editing" && isChatAi) {
+      return (
+        <span className="text-xs text-muted-foreground">
+          Editing document...
+        </span>
+      );
+    }
+
+    if (aiInteractionState === "loading" && isChatAi) {
+      return (
+        <span className="flex items-center gap-1 text-muted-foreground translate-y-2">
+          <span className="inline-block h-1 w-1 rounded-full bg-current animate-bounce" />
+          <span className="inline-block h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:120ms]" />
+          <span className="inline-block h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:240ms]" />
+        </span>
+      );
+    }
+
+    return null;
+  };
 
   const handleSubmit = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
+    const sessionPromise = ensureSession();
     addUserMessage(trimmed);
+    void sessionPromise.then((sessionId) =>
+      appendMessage(sessionId, "user", trimmed)
+    );
     const modelMessageId = startModelMessage("");
 
     submitAiInstruction(trimmed, {
@@ -30,6 +69,9 @@ export default function Chat() {
           message.trim().length > 0 ? message : "Edits applied.";
         setMessageContent(modelMessageId, finalMessage);
         finishMessage(modelMessageId);
+        void sessionPromise.then((sessionId) =>
+          appendMessage(sessionId, "model", finalMessage)
+        );
       },
     });
   };
@@ -39,7 +81,9 @@ export default function Chat() {
       <div className="flex flex-1 flex-col gap-3 pt-4">
         {messages.map((message) =>
           message.role === "model" ? (
-            <ModelMessage key={message.id}>{message.content}</ModelMessage>
+            <ModelMessage key={message.id}>
+              {renderModelContent(message)}
+            </ModelMessage>
           ) : (
             <UserMessage key={message.id}>{message.content}</UserMessage>
           )
@@ -48,7 +92,9 @@ export default function Chat() {
       <ChatInput
         onSubmit={handleSubmit}
         disabled={
-          aiInteractionState === "loading" || aiInteractionState === "streaming"
+          aiInteractionState === "loading" ||
+          aiInteractionState === "streaming" ||
+          aiInteractionState === "editing"
         }
       />
     </div>

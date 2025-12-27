@@ -6,10 +6,10 @@ import {
 } from "@/lib/api/contracts";
 import { requireSessionAccess } from "@/lib/session-access";
 
-type RouteParams = { params: { sessionId: string } };
+type RouteParams = { params: Promise<{ sessionId: string }> };
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const sessionId = SessionIdSchema.parse(params.sessionId);
+  const sessionId = SessionIdSchema.parse((await params).sessionId);
   const access = await requireSessionAccess(sessionId);
   if (!access.ok) {
     return Response.json({ error: access.error }, { status: access.status });

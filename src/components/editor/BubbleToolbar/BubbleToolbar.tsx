@@ -149,11 +149,13 @@ export default function BubbleToolbar() {
                     expanded={isAiMode}
                     disabled={
                       aiInteractionState === "loading" ||
-                      aiInteractionState === "streaming"
+                      aiInteractionState === "streaming" ||
+                      aiInteractionState === "editing"
                     }
                     loading={
                       aiInteractionState === "loading" ||
-                      aiInteractionState === "streaming"
+                      aiInteractionState === "streaming" ||
+                      aiInteractionState === "editing"
                     }
                     placeholder={
                       completedPrompt

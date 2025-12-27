@@ -12,7 +12,9 @@ import {
 } from "react";
 import type { Editor, JSONContent } from "@tiptap/react";
 import { useAiEdit } from "@/hooks/editor/useAiEdit";
+import { useDocumentAutosave } from "@/hooks/editor/useDocumentAutosave";
 import { useChatContext } from "@/components/chat/ChatContext";
+import { useSessionContext } from "@/components/session/SessionContext";
 
 type SelectionRange = { from: number; to: number } | null;
 
@@ -57,7 +59,8 @@ type EditorContextValue = {
   // AI editing
   submitAiInstruction: (instruction: string, options?: AiInstructionOptions) => void;
   undoLastEdit: () => void;
-  aiInteractionState: "idle" | "loading" | "streaming" | "complete";
+  aiInteractionState: "idle" | "loading" | "streaming" | "editing" | "complete";
+  lastAiMode: AiEditMode;
   completedPrompt: CompletedPrompt | null;
   aiEditError: unknown;
   resetAiEdit: () => void;
@@ -88,6 +91,7 @@ export function EditorProvider({
   const [textFormat, setTextFormat] = useState<TextFormatValue>("paragraph");
   const [activeMarks, setActiveMarks] = useState<string[]>([]);
   const [isAiMode, setIsAiMode] = useState(false);
+  const [lastAiMode, setLastAiMode] = useState<AiEditMode>("inline");
 
   const [highlightedRange, setHighlightedRange] =
     useState<SelectionRange>(null);
@@ -101,6 +105,9 @@ export function EditorProvider({
   // AI editing hook
   const aiEdit = useAiEdit(editor);
   const chat = useChatContext();
+  const { ensureSession } = useSessionContext();
+
+  useDocumentAutosave(editor, ensureSession);
 
   // Update formatting states when selection changes
   useEffect(() => {
@@ -160,6 +167,7 @@ export function EditorProvider({
   useEffect(() => {
     if (
       (aiEdit.aiInteractionState === "streaming" ||
+        aiEdit.aiInteractionState === "editing" ||
         aiEdit.aiInteractionState === "complete") &&
       editor
     ) {
@@ -243,6 +251,8 @@ export function EditorProvider({
   const submitAiInstruction = useCallback(
     (instruction: string, options?: AiInstructionOptions) => {
       if (!editor) return;
+
+      setLastAiMode(options?.mode ?? "inline");
 
       // Store undo state BEFORE running edit
       const { from, to } = editor.state.selection;
@@ -344,6 +354,7 @@ export function EditorProvider({
       submitAiInstruction,
       undoLastEdit,
       aiInteractionState: aiEdit.aiInteractionState,
+      lastAiMode,
       completedPrompt,
       aiEditError: aiEdit.error,
       resetAiEdit: aiEdit.reset,
@@ -360,6 +371,7 @@ export function EditorProvider({
       submitAiInstruction,
       undoLastEdit,
       aiEdit.aiInteractionState,
+      lastAiMode,
       completedPrompt,
       aiEdit.error,
       aiEdit.reset,

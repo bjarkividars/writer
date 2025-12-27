@@ -8,8 +8,14 @@ import { useRef } from "react";
 import { editorExtensions } from "@/editor/extensions";
 import { EditorProvider } from "@/components/editor/EditorContext";
 import { ChatProvider } from "@/components/chat/ChatContext";
+import { SessionProvider } from "@/components/session/SessionContext";
+import { SessionHydrator } from "@/components/session/SessionHydrator";
 
-export default function Workspace() {
+type WorkspaceProps = {
+  initialSessionId?: string | null;
+};
+
+export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
   const editorRootRef = useRef<HTMLDivElement>(null);
   const editor = useEditor({
     immediatelyRender: false,
@@ -23,32 +29,35 @@ export default function Workspace() {
   });
 
   return (
-    <ChatProvider>
-      <EditorProvider editor={editor} editorRootRef={editorRootRef}>
-        <Group orientation="horizontal" className="mx-0 flex h-full w-full">
-          <Panel>
-            <div className="h-full overflow-y-auto">
-              <div className="mx-auto min-h-full w-full max-w-[8.5in]">
-                <TipTapEditor editor={editor} editorRootRef={editorRootRef} />
+    <SessionProvider initialSessionId={initialSessionId}>
+      <ChatProvider>
+        <EditorProvider editor={editor} editorRootRef={editorRootRef}>
+          <SessionHydrator />
+          <Group orientation="horizontal" className="mx-0 flex h-full w-full">
+            <Panel>
+              <div className="h-full overflow-y-auto">
+                <div className="mx-auto min-h-full w-full max-w-[8.5in]">
+                  <TipTapEditor editor={editor} editorRootRef={editorRootRef} />
+                </div>
               </div>
-            </div>
-          </Panel>
+            </Panel>
 
-          <Separator />
+            <Separator />
 
-          <Panel
-            defaultSize="30%"
-            minSize="15%"
-            maxSize="45%"
-            collapsible
-            collapsedSize="0%"
-          >
-            <div className="h-full relative overflow-y-auto bg-muted">
-              <Chat />
-            </div>
-          </Panel>
-        </Group>
-      </EditorProvider>
-    </ChatProvider>
+            <Panel
+              defaultSize="30%"
+              minSize="15%"
+              maxSize="45%"
+              collapsible
+              collapsedSize="0%"
+            >
+              <div className="h-full relative overflow-y-auto bg-muted">
+                <Chat />
+              </div>
+            </Panel>
+          </Group>
+        </EditorProvider>
+      </ChatProvider>
+    </SessionProvider>
   );
 }

@@ -7,7 +7,7 @@ import type { EditState } from "@/hooks/editor/aiEdit/types";
 import { dispatchOperation } from "@/hooks/editor/aiEdit/dispatchOperation";
 import { parsePartialEdits } from "@/hooks/editor/aiEdit/streamParser";
 
-type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
+type AiInteractionState = "idle" | "loading" | "streaming" | "editing" | "complete";
 
 type AiEditMode = "inline" | "chat";
 
@@ -90,7 +90,8 @@ export function useAiEdit(editor: Editor | null) {
   const [error, setError] = useState<Error | null>(null);
   const [aiInteractionState, setAiInteractionState] =
     useState<AiInteractionState>("idle");
-  const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
+  const hasStartedStreamingRef = useRef(false);
+  const hasStartedEditingRef = useRef(false);
 
   /**
    * Resolve edit target to absolute positions using block map
@@ -234,12 +235,12 @@ export function useAiEdit(editor: Editor | null) {
       });
 
       // Notify streaming started on first edit
-      if (appliedAnyEdit && !hasStartedStreaming) {
-        setHasStartedStreaming(true);
-        setAiInteractionState("streaming");
+      if (appliedAnyEdit && !hasStartedEditingRef.current) {
+        hasStartedEditingRef.current = true;
+        setAiInteractionState("editing");
       }
     },
-    [editor, resolveTarget, hasStartedStreaming]
+    [editor, resolveTarget]
   );
 
   /**
@@ -249,7 +250,8 @@ export function useAiEdit(editor: Editor | null) {
     async (payload: EditRequest, options?: AiEditRunOptions) => {
       setIsLoading(true);
       setError(null);
-      setHasStartedStreaming(false);
+      hasStartedStreamingRef.current = false;
+      hasStartedEditingRef.current = false;
       setAiInteractionState("loading");
       editsState.current.clear();
       messageRef.current = "";
@@ -320,6 +322,15 @@ export function useAiEdit(editor: Editor | null) {
               if (nextMessage !== messageRef.current) {
                 messageRef.current = nextMessage;
                 options?.onMessageUpdate?.(nextMessage);
+              }
+            }
+            if (
+              !hasStartedStreamingRef.current &&
+              (parsed?.edits || parsed?.message !== undefined)
+            ) {
+              hasStartedStreamingRef.current = true;
+              if (!hasStartedEditingRef.current) {
+                setAiInteractionState("streaming");
               }
             }
           }
