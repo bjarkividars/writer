@@ -10,7 +10,7 @@ import {
   RefObject,
   ReactNode,
 } from "react";
-import type { Editor } from "@tiptap/react";
+import type { Editor, JSONContent } from "@tiptap/react";
 import { useAiEdit } from "@/hooks/editor/useAiEdit";
 
 type SelectionRange = { from: number; to: number } | null;
@@ -29,8 +29,10 @@ type CompletedPrompt = {
 };
 
 type UndoState = {
-  originalText: string;
-  range: { from: number; to: number };
+  doc: JSONContent;
+  selection: { from: number; to: number };
+  highlightedRange: SelectionRange;
+  selectedText: string;
 } | null;
 
 type EditorContextValue = {
@@ -146,18 +148,26 @@ export function EditorProvider({
 
   // Remove highlight when streaming starts or on error/completion
   useEffect(() => {
-    if ((aiEdit.aiInteractionState === "streaming" || aiEdit.aiInteractionState === "complete") && editor) {
-      console.log("[EditorContext] Removing highlights, state:", aiEdit.aiInteractionState);
+    if (
+      (aiEdit.aiInteractionState === "streaming" ||
+        aiEdit.aiInteractionState === "complete") &&
+      editor
+    ) {
+      console.log(
+        "[EditorContext] Removing highlights, state:",
+        aiEdit.aiInteractionState
+      );
 
       // Remove all aiHighlight marks from the entire document
       const doc = editor.state.doc;
-      editor.chain()
+      editor
+        .chain()
         .command(({ tr, dispatch }) => {
           if (!dispatch) return true;
 
           // Remove marks from entire document
           doc.descendants((node, pos) => {
-            if (node.marks.some(mark => mark.type.name === "aiHighlight")) {
+            if (node.marks.some((mark) => mark.type.name === "aiHighlight")) {
               const from = pos;
               const to = pos + node.nodeSize;
               tr.removeMark(from, to, editor.schema.marks.aiHighlight);
@@ -196,6 +206,7 @@ export function EditorProvider({
     setIsAiMode(false);
 
     // Clear AI interaction state
+    editor?.commands.focus();
     aiEdit.reset();
     setCompletedPrompt(null);
     setUndoState(null);
@@ -225,11 +236,11 @@ export function EditorProvider({
 
       // Store undo state BEFORE running edit
       const { from, to } = editor.state.selection;
-      const originalText = editor.state.doc.textBetween(from, to, " ");
-
       setUndoState({
-        originalText,
-        range: { from, to },
+        doc: editor.state.doc.toJSON(),
+        selection: { from, to },
+        highlightedRange,
+        selectedText,
       });
 
       // Store the instruction for history
@@ -250,29 +261,31 @@ export function EditorProvider({
       // Start the edit (useAiEdit will handle state transitions)
       aiEdit.run(instruction);
     },
-    [editor, aiEdit, highlightedRange]
+    [editor, aiEdit, highlightedRange, selectedText]
   );
 
   // Undo last edit: restore original text
   const undoLastEdit = useCallback(() => {
     if (!editor || !undoState) return;
 
-    const { from } = undoState.range;
-    const to = from + undoState.originalText.length;
+    aiEdit.stop();
 
-    // Restore original text
-    editor
-      .chain()
-      .focus()
-      .deleteRange(undoState.range)
-      .insertContentAt(undoState.range.from, undoState.originalText)
-      .setTextSelection({ from, to })
-      .setMark("aiHighlight", { loading: false })
-      .run();
+    // Restore the full document snapshot
+    editor.commands.setContent(undoState.doc, { emitUpdate: true });
 
-    // Update highlighted range
-    setHighlightedRange({ from, to });
-    setSelectedText(undoState.originalText);
+    // Restore selection + highlight state
+    editor.commands.setTextSelection(undoState.selection);
+    if (undoState.highlightedRange) {
+      editor
+        .chain()
+        .setTextSelection(undoState.highlightedRange)
+        .setMark("aiHighlight", { loading: false })
+        .run();
+      editor.commands.setTextSelection(undoState.selection);
+    }
+
+    setHighlightedRange(undoState.highlightedRange);
+    setSelectedText(undoState.selectedText);
 
     // Clear state
     setUndoState(null);

@@ -305,7 +305,7 @@ export function useAiEdit(editor: Editor | null) {
             if (parsed && parsed.edits) {
               processEdits(parsed.edits);
             }
-          }
+        }
         }
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {

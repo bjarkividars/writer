@@ -10,6 +10,7 @@ import {
   findListItemRange,
   isStringArray,
   normalizeItems,
+  stripHeadingMarker,
   shiftRangesAfterEdit,
 } from "../utils";
 
@@ -33,7 +34,10 @@ export function handleInsertItemOperation(args: {
     return false;
   }
 
-  const cleanedItems = normalizeItems(itemsValue);
+  let cleanedItems = normalizeItems(itemsValue);
+  if (state.blockType === "heading") {
+    cleanedItems = cleanedItems.map(stripHeadingMarker);
+  }
   if (cleanedItems.length === 0) {
     return false;
   }

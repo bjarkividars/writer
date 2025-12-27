@@ -48,6 +48,11 @@ export function getRequestedHeadingLevel(markdown: string): number | null {
   return match ? match[1].length : null;
 }
 
+export function stripHeadingMarker(text: string) {
+  const match = text.match(/^\s*#{1,3}\s+(.+)$/);
+  return match ? match[1] : text;
+}
+
 function isWhitespace(char: string) {
   return char === " " || char === "\n" || char === "\t" || char === "\r";
 }
@@ -181,7 +186,12 @@ export function buildBlockNode(params: {
   headingLevel: number | null;
   items: string[];
 }) {
-  const cleanedItems = params.items.map((item) => item.trim()).filter(Boolean);
+  const cleanedItems = params.items
+    .map((item) =>
+      params.blockType === "heading" ? stripHeadingMarker(item) : item
+    )
+    .map((item) => item.trim())
+    .filter(Boolean);
   if (cleanedItems.length === 0) return null;
 
   if (params.blockType === "bulletList" || params.blockType === "orderedList") {

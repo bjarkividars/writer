@@ -175,7 +175,6 @@ export function parseMarkdownForBlock(
       return parseInlineMarks(headingMatch[2]);
     }
 
-    console.warn("[Parser] Heading missing # marker");
     return parseInlineMarks(markdown);
   }
 

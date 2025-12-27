@@ -223,7 +223,7 @@ ${itemsText}
 **RULES:**
 1. Always include an "operation" object with a "type".
 2. Paragraphs/headings: Use inline markdown (**bold**, *italic*, ~~strike~~, \`code\`).
-3. Headings: For replace operations, ALWAYS use # prefix (#, ##, ###).
+3. Headings: Do NOT include # markers in item text; use "headingLevel" on operations instead.
 4. List items: Inline markdown only (no bullets, already in list).
 5. insert-item: "items" are sentences for paragraphs/headings, list items for lists.
 6. insert-block: set "blockType" and "headingLevel" (use null when not heading).
