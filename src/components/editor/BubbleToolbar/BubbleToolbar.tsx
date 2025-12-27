@@ -123,15 +123,15 @@ export default function BubbleToolbar() {
                 e.preventDefault();
               }
             }}
-            className="flex items-center gap-1 rounded-md border border-border bg-background px-1 py-0.5 shadow-bubble"
+            className="flex items-center gap-1 rounded-md border border-border bg-background px-1 py-0.5 shadow-bubble w-[350px]"
           >
             <Tooltip.Provider>
               <Toolbar.Root
                 orientation="horizontal"
-                className="flex flex-col items-stretch gap-1"
+                className="flex flex-col items-stretch gap-1 w-full"
               >
                 {aiInteractionState === "complete" && completedPrompt && (
-                  <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-border max-w-[316px]">
+                  <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-border">
                     <span className="text-xs text-muted-foreground truncate flex-1">
                       {completedPrompt.text}
                     </span>
@@ -173,7 +173,7 @@ export default function BubbleToolbar() {
 
                   {showFormattingButtons && (
                     <FormattingButtons
-                      className="transition-all duration-150"
+                      className="transition-all duration-150 flex-shrink-0"
                       isAiMode={isAiMode}
                     />
                   )}

@@ -95,9 +95,9 @@ export default function AssistantInput({
 
   return (
     <div
-      className={`relative flex items-center transition-all duration-200 ease-in-out ${
-        expanded ? "w-72" : "w-36"
-      }`}
+      className={
+        "relative flex items-center transition-all duration-200 ease-in-out flex-1"
+      }
     >
       <ScrollAreaRoot className="w-full">
         <ScrollAreaViewport className="max-h-20 rounded-md">

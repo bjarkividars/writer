@@ -7,6 +7,36 @@ export function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
+export function normalizeItems(items: string[]) {
+  return items.map((item) => item.trim()).filter(Boolean);
+}
+
+export function areStringArraysEqual(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
+}
+
+export function clampPos(doc: Editor["state"]["doc"], pos: number) {
+  const max = doc.content.size;
+  if (pos < 0) return 0;
+  if (pos > max) return max;
+  return pos;
+}
+
+export function clampRange(
+  doc: Editor["state"]["doc"],
+  from: number,
+  to: number
+) {
+  const clampedFrom = clampPos(doc, from);
+  const clampedTo = clampPos(doc, to);
+  if (clampedFrom > clampedTo) return null;
+  return { from: clampedFrom, to: clampedTo };
+}
+
 export function isOperationObject(
   operation: unknown
 ): operation is { type?: unknown } {
@@ -27,7 +57,16 @@ export function getTextLength(nodes: Array<{ text: string }>) {
 }
 
 export function shiftRangesAfterEdit(params: ShiftRangesParams) {
-  const { from, to, delta, itemId, nextLength, blockMap, editsState } = params;
+  const {
+    from,
+    to,
+    delta,
+    itemId,
+    nextLength,
+    blockMap,
+    editsState,
+    skipState,
+  } = params;
 
   if (blockMap.length > 0) {
     for (let i = 0; i < blockMap.length; i += 1) {
@@ -59,26 +98,43 @@ export function shiftRangesAfterEdit(params: ShiftRangesParams) {
   }
 
   editsState.forEach((state) => {
-    if (!state.targetRange) return;
+    if (state === skipState) return;
 
-    if (itemId && state.itemId === itemId) {
-      state.targetRange = { from, to: from + nextLength };
-      return;
+    if (state.targetRange) {
+      if (itemId && state.itemId === itemId) {
+        state.targetRange = { from, to: from + nextLength };
+      } else if (state.targetRange.from >= to) {
+        state.targetRange = {
+          from: state.targetRange.from + delta,
+          to: state.targetRange.to + delta,
+        };
+      } else if (state.targetRange.to <= from) {
+        // No change.
+      } else {
+        console.warn("[AI Edit] Overlapping edit range");
+      }
     }
 
-    if (state.targetRange.from >= to) {
-      state.targetRange = {
-        from: state.targetRange.from + delta,
-        to: state.targetRange.to + delta,
-      };
-      return;
+    if (state.insertedRange) {
+      if (state.insertedRange.from >= to) {
+        state.insertedRange = {
+          from: state.insertedRange.from + delta,
+          to: state.insertedRange.to + delta,
+        };
+      } else if (state.insertedRange.to <= from) {
+        // No change.
+      } else {
+        console.warn("[AI Edit] Overlapping inserted range");
+      }
     }
 
-    if (state.targetRange.to <= from) {
-      return;
+    if (state.insertPos !== undefined) {
+      if (state.insertPos >= to) {
+        state.insertPos += delta;
+      } else if (state.insertPos >= from && state.insertPos < to) {
+        console.warn("[AI Edit] Insert position overlaps edit range");
+      }
     }
-
-    console.warn("[AI Edit] Overlapping edit range");
   });
 }
 

@@ -5,6 +5,7 @@ import { handleInsertItemOperation } from "./handlers/insertItem";
 import { handleInsertBlockOperation } from "./handlers/insertBlock";
 import { handleDeleteItemOperation } from "./handlers/deleteItem";
 import { handleDeleteBlockOperation } from "./handlers/deleteBlock";
+import { handleTransformBlockOperation } from "./handlers/transformBlock";
 
 export function dispatchOperation(args: OperationDispatchArgs): boolean {
   const { state, operation } = args;
@@ -14,7 +15,8 @@ export function dispatchOperation(args: OperationDispatchArgs): boolean {
   const operationType = operation.type;
   if (typeof operationType !== "string") return false;
 
-  if (operationType !== "replace" && state.operationApplied) {
+  const oneShotTypes = new Set(["delete-item", "delete-block"]);
+  if (oneShotTypes.has(operationType) && state.operationApplied) {
     return false;
   }
 
@@ -41,6 +43,11 @@ export function dispatchOperation(args: OperationDispatchArgs): boolean {
       });
     case "delete-block":
       return handleDeleteBlockOperation({
+        ...args,
+        operation,
+      });
+    case "transform-block":
+      return handleTransformBlockOperation({
         ...args,
         operation,
       });

@@ -12,7 +12,7 @@ import {
   shiftRangesAfterEdit,
 } from "../utils";
 
-export function handleInsertBlockOperation(args: {
+export function handleTransformBlockOperation(args: {
   editor: Editor;
   state: EditState;
   operation: unknown;
@@ -23,13 +23,11 @@ export function handleInsertBlockOperation(args: {
 
   if (!state.targetRange) return false;
 
-  const position = (operation as { position?: unknown }).position;
   const blockType = (operation as { blockType?: unknown }).blockType;
   const headingLevel = (operation as { headingLevel?: unknown }).headingLevel;
   const itemsValue = (operation as { items?: unknown }).items;
 
   if (
-    (position !== "before" && position !== "after") ||
     typeof blockType !== "string" ||
     (blockType !== "paragraph" &&
       blockType !== "heading" &&
@@ -50,14 +48,26 @@ export function handleInsertBlockOperation(args: {
   }
 
   let insertPos = state.insertPos;
-  if (insertPos === undefined) {
+  let deleteFrom: number;
+  let deleteTo: number;
+
+  if (!state.rangeDeleted) {
     const blockRange = findBlockRange(editor, state.targetRange.from);
     if (!blockRange) {
       state.operationApplied = true;
       return false;
     }
-    insertPos = position === "before" ? blockRange.from : blockRange.to;
+
+    insertPos = blockRange.from;
+    deleteFrom = blockRange.from;
+    deleteTo = blockRange.to;
     state.insertPos = insertPos;
+  } else {
+    if (insertPos === undefined) {
+      return false;
+    }
+    deleteFrom = state.insertedRange ? state.insertedRange.from : insertPos;
+    deleteTo = state.insertedRange ? state.insertedRange.to : insertPos;
   }
 
   const blockNode = buildBlockNode({
@@ -70,27 +80,35 @@ export function handleInsertBlockOperation(args: {
     return false;
   }
 
+  if (!state.rangeDeleted && state.blockNum) {
+    for (let i = blockMap.length - 1; i >= 0; i -= 1) {
+      if (blockMap[i].blockNum === state.blockNum) {
+        blockMap.splice(i, 1);
+      }
+    }
+  }
+
+  const beforeSize = editor.state.doc.nodeSize;
   insertPos = clampPos(editor.state.doc, insertPos);
   state.insertPos = insertPos;
-
-  const deleteFrom = state.insertedRange ? state.insertedRange.from : insertPos;
-  const deleteTo = state.insertedRange ? state.insertedRange.to : insertPos;
   const deleteRange = clampRange(editor.state.doc, deleteFrom, deleteTo);
   if (!deleteRange) return false;
 
-  const beforeSize = editor.state.doc.nodeSize;
-  const chain = editor.chain().focus();
-  if (deleteRange.from !== deleteRange.to) {
-    chain.deleteRange({ from: deleteRange.from, to: deleteRange.to });
-  }
-  chain.insertContentAt(insertPos, blockNode).run();
+  editor
+    .chain()
+    .focus()
+    .deleteRange({ from: deleteRange.from, to: deleteRange.to })
+    .insertContentAt(insertPos, blockNode)
+    .run();
   const afterSize = editor.state.doc.nodeSize;
   const delta = afterSize - beforeSize;
   const oldLength = deleteRange.to - deleteRange.from;
   const nextLength = oldLength + delta;
 
+  state.rangeDeleted = true;
   state.itemsSeen = cleanedItems;
   state.insertedRange = { from: insertPos, to: insertPos + nextLength };
+  state.targetRange = { from: insertPos, to: insertPos };
 
   if (delta !== 0) {
     shiftRangesAfterEdit({

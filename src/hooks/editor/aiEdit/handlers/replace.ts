@@ -17,7 +17,7 @@ export function handleReplaceOperation(args: {
   state: EditState;
   operation: unknown;
   blockMap: BlockItem[];
-  editsState: Map<number, EditState>;
+  editsState: Map<string, EditState>;
 }): boolean {
   const { editor, state, operation, blockMap, editsState } = args;
 

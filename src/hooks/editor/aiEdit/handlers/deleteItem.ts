@@ -8,7 +8,7 @@ export function handleDeleteItemOperation(args: {
   state: EditState;
   operation: unknown;
   blockMap: BlockItem[];
-  editsState: Map<number, EditState>;
+  editsState: Map<string, EditState>;
 }): boolean {
   const { editor, state, blockMap, editsState } = args;
 

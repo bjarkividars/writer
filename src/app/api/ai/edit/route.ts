@@ -208,11 +208,17 @@ ${itemsText}
 "insert a level 2 heading before block-3.1"
 → {"edits": [{"target": {"kind": "block-item", "itemId": "block-3.1"}, "operation": {"type": "insert-block", "position": "before", "blockType": "heading", "headingLevel": 2, "items": ["New heading"]}}], "complete": true}
 
+"insert two paragraphs after block-1.1"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-1.1"}, "operation": {"type": "insert-block", "position": "after", "blockType": "paragraph", "headingLevel": null, "items": ["First paragraph."]}}, {"target": {"kind": "block-item", "itemId": "block-1.1"}, "operation": {"type": "insert-block", "position": "after", "blockType": "paragraph", "headingLevel": null, "items": ["Second paragraph."]}}], "complete": true}
+
 "delete block-2.3"
 → {"edits": [{"target": {"kind": "block-item", "itemId": "block-2.3"}, "operation": {"type": "delete-item"}}], "complete": true}
 
 "delete the block containing block-4.1"
 → {"edits": [{"target": {"kind": "block-item", "itemId": "block-4.1"}, "operation": {"type": "delete-block"}}], "complete": true}
+
+"convert block-2.1 to a bullet list"
+→ {"edits": [{"target": {"kind": "block-item", "itemId": "block-2.1"}, "operation": {"type": "transform-block", "blockType": "bulletList", "headingLevel": null, "items": ["First item", "Second item"]}}], "complete": true}
 
 **RULES:**
 1. Always include an "operation" object with a "type".
@@ -221,5 +227,10 @@ ${itemsText}
 4. List items: Inline markdown only (no bullets, already in list).
 5. insert-item: "items" are sentences for paragraphs/headings, list items for lists.
 6. insert-block: set "blockType" and "headingLevel" (use null when not heading).
-7. Always target items using "block-item" with an itemId`;
+7. transform-block: replace the entire block with the provided items + blockType.
+8. Paragraph/heading items must be single sentences with no line breaks.
+9. If multiple paragraphs are needed, use multiple insert-block operations (one per paragraph).
+10. Item IDs refer to existing items only; never invent new IDs.
+11. When inserting multiple blocks after/before the same itemId, keep them ordered in the edits array.
+12. Always target items using "block-item" with an itemId`;
 }

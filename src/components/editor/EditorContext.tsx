@@ -144,6 +144,38 @@ export function EditorProvider({
     };
   }, [editor]);
 
+  // Remove highlight when streaming starts or on error/completion
+  useEffect(() => {
+    if ((aiEdit.aiInteractionState === "streaming" || aiEdit.aiInteractionState === "complete") && editor) {
+      console.log("[EditorContext] Removing highlights, state:", aiEdit.aiInteractionState);
+
+      // Remove all aiHighlight marks from the entire document
+      const doc = editor.state.doc;
+      editor.chain()
+        .command(({ tr, dispatch }) => {
+          if (!dispatch) return true;
+
+          // Remove marks from entire document
+          doc.descendants((node, pos) => {
+            if (node.marks.some(mark => mark.type.name === "aiHighlight")) {
+              const from = pos;
+              const to = pos + node.nodeSize;
+              tr.removeMark(from, to, editor.schema.marks.aiHighlight);
+            }
+          });
+
+          return true;
+        })
+        .run();
+
+      // Clear the highlighted range tracking
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHighlightedRange(null);
+
+      console.log("[EditorContext] Highlights removed");
+    }
+  }, [aiEdit.aiInteractionState, editor]);
+
   // Enter AI mode: capture selection and apply highlight mark
   const enterAiMode = useCallback(() => {
     if (!editor) return;
@@ -206,10 +238,19 @@ export function EditorProvider({
         timestamp: Date.now(),
       });
 
+      // Update highlight with loading attribute to show shimmer effect
+      if (highlightedRange) {
+        editor
+          .chain()
+          .setTextSelection(highlightedRange)
+          .setMark("aiHighlight", { loading: true })
+          .run();
+      }
+
       // Start the edit (useAiEdit will handle state transitions)
       aiEdit.run(instruction);
     },
-    [editor, aiEdit]
+    [editor, aiEdit, highlightedRange]
   );
 
   // Undo last edit: restore original text
@@ -226,7 +267,7 @@ export function EditorProvider({
       .deleteRange(undoState.range)
       .insertContentAt(undoState.range.from, undoState.originalText)
       .setTextSelection({ from, to })
-      .setMark("aiHighlight")
+      .setMark("aiHighlight", { loading: false })
       .run();
 
     // Update highlighted range

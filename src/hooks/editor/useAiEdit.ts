@@ -5,6 +5,7 @@ import type { BlockItem, BlockType } from "@/lib/ai/schemas";
 import { EditRequest } from "@/lib/ai/schemas";
 import type { EditState } from "@/hooks/editor/aiEdit/types";
 import { dispatchOperation } from "@/hooks/editor/aiEdit/dispatchOperation";
+import { parsePartialEdits } from "@/hooks/editor/aiEdit/streamParser";
 
 type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
 
@@ -12,13 +13,6 @@ type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
  * Return type of useAiEdit hook
  */
 export type UseAiEditResult = ReturnType<typeof useAiEdit>;
-
-/**
- * Type guard to check if value is an array
- */
-function isArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
 
 /**
  * Type guard for parsed edit data
@@ -41,6 +35,33 @@ function hasTargetFields(
   return typeof target === "object" && target !== null;
 }
 
+function getEditKey(index: number, edit: { target?: unknown; operation?: unknown }) {
+  let key = `${index}`;
+
+  if (hasTargetFields(edit.target)) {
+    const itemId = edit.target.itemId;
+    if (typeof itemId === "string" && itemId.length > 0) {
+      key = `${key}:${itemId}`;
+    }
+  }
+
+  const operation = edit.operation;
+  const type =
+    typeof operation === "object" && operation !== null && "type" in operation
+      ? (operation as { type?: unknown }).type
+      : undefined;
+  if (typeof type === "string") {
+    key = `${key}:${type}`;
+
+    const position = (operation as { position?: unknown }).position;
+    if (typeof position === "string") {
+      key = `${key}:${position}`;
+    }
+  }
+
+  return { key };
+}
+
 /**
  * Hook for AI-powered document editing with streaming
  *
@@ -52,7 +73,7 @@ export function useAiEdit(editor: Editor | null) {
   const blockMapRef = useRef<BlockItem[]>([]);
 
   // Simple state tracking per edit
-  const editsState = useRef<Map<number, EditState>>(new Map());
+  const editsState = useRef<Map<string, EditState>>(new Map());
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // React state for UI
@@ -102,77 +123,6 @@ export function useAiEdit(editor: Editor | null) {
   );
 
   /**
-   * Extract edits from partial JSON, including incomplete replacement text
-   */
-  const tryParsePartialJSON = useCallback(
-    (text: string): { edits?: unknown[] } | null => {
-      console.log("[STREAM] Trying to parse partial JSON:", text);
-      // Try complete JSON parse first
-      try {
-        const parsed = JSON.parse(text) as unknown;
-        if (typeof parsed === "object" && parsed !== null && "edits" in parsed) {
-          const editsValue = (parsed as { edits: unknown }).edits;
-          if (isArray(editsValue)) {
-            return { edits: editsValue };
-          }
-        }
-      } catch {
-        // Fall through to partial extraction
-      }
-
-      // Extract partial edits using regex (replace only)
-      const edits: unknown[] = [];
-
-      // Find the start of each edit - look for target with kind field
-      const editMatches = text.matchAll(/\{"target":\s*\{([^}]+)\}/g);
-
-      for (const editMatch of editMatches) {
-        try {
-          const targetJson = `{${editMatch[1]}}`;
-          const editStartPos = editMatch.index!;
-
-          // Parse the target
-          const target = JSON.parse(targetJson) as unknown;
-
-          // Extract replacement text after this target
-          const afterTarget = text.substring(editStartPos);
-          const typeMatch = afterTarget.match(/"type"\s*:\s*"([^"]+)"/);
-          if (!typeMatch || typeMatch[1] !== "replace") {
-            continue;
-          }
-
-          const replacementMatch = afterTarget.match(/"replacement"\s*:\s*"([^"]*)"/);
-
-          let replacement = "";
-          if (replacementMatch) {
-            // Found complete replacement with closing quote
-            replacement = replacementMatch[1];
-          } else {
-            // Look for incomplete replacement without closing quote
-            const incompleteMatch = afterTarget.match(/"replacement"\s*:\s*"([^"]*)/);
-            if (incompleteMatch) {
-              replacement = incompleteMatch[1];
-            }
-          }
-
-          edits.push({
-            target,
-            operation: {
-              type: "replace",
-              replacement,
-            },
-          });
-        } catch {
-          // Skip invalid matches
-        }
-      }
-
-      return edits.length > 0 ? { edits } : null;
-    },
-    []
-  );
-
-  /**
    * Process edits incrementally as they stream in
    */
   const processEdits = useCallback(
@@ -180,11 +130,13 @@ export function useAiEdit(editor: Editor | null) {
       if (!editor) return;
 
       let appliedAnyEdit = false;
+      const insertAnchors = new Map<string, number>();
 
       edits.forEach((edit, index) => {
         if (!isValidEdit(edit)) return;
 
-        let state = editsState.current.get(index);
+        const { key } = getEditKey(index, edit);
+        let state = editsState.current.get(key);
 
         // STEP 1: Resolve and store target (DON'T delete yet!)
         if (!state?.targetSeen && edit.target !== undefined) {
@@ -197,7 +149,7 @@ export function useAiEdit(editor: Editor | null) {
                 : undefined;
 
             // Store range without deleting
-            editsState.current.set(index, {
+            editsState.current.set(key, {
               targetSeen: true,
               targetRange: { from: range.from, to: range.to },
               blockType: range.blockType,
@@ -206,23 +158,66 @@ export function useAiEdit(editor: Editor | null) {
               rangeDeleted: false, // Haven't deleted original yet
               replacementSeen: "",
               replacementLength: 0,
+              insertPos: undefined,
+              insertedRange: null,
+              itemsSeen: [],
               itemId,
               operationApplied: false,
             });
 
-            state = editsState.current.get(index)!;
+            state = editsState.current.get(key)!;
           }
         }
 
         if (!state?.targetSeen || !state.targetRange) return;
 
+        const itemId = state.itemId;
+        const operation = edit.operation;
+        const operationType =
+          typeof operation === "object" &&
+          operation !== null &&
+          "type" in operation
+            ? (operation as { type?: unknown }).type
+            : undefined;
+        const position =
+          typeof operation === "object" &&
+          operation !== null &&
+          "position" in operation
+            ? (operation as { position?: unknown }).position
+            : undefined;
+        const anchorKey =
+          typeof itemId === "string" &&
+          itemId.length > 0 &&
+          (operationType === "insert-item" || operationType === "insert-block") &&
+          (position === "before" || position === "after")
+            ? `${itemId}:${position}`
+            : null;
+
+        if (anchorKey && state.insertPos === undefined) {
+          const anchorPos = insertAnchors.get(anchorKey);
+          if (anchorPos !== undefined) {
+            state.insertPos = anchorPos;
+          }
+        }
+
         const applied = dispatchOperation({
           editor,
           state,
-          operation: edit.operation,
+          operation,
           blockMap: blockMapRef.current,
           editsState: editsState.current,
         });
+
+        if (anchorKey) {
+          const anchorPos = state.insertedRange
+            ? position === "after"
+              ? state.insertedRange.to
+              : state.insertedRange.from
+            : state.insertPos;
+          if (anchorPos !== undefined) {
+            insertAnchors.set(anchorKey, anchorPos);
+          }
+        }
 
         if (applied) {
           appliedAnyEdit = true;
@@ -294,11 +289,6 @@ export function useAiEdit(editor: Editor | null) {
               try {
                 const mapData = JSON.parse(firstLine) as { blockMap: BlockItem[] };
                 blockMapRef.current = mapData.blockMap;
-                console.log(
-                  "[AI Edit] Received block map:",
-                  mapData.blockMap.length,
-                  "items"
-                );
 
                 // Remove block map from buffer
                 buffer = lines.slice(1).join("\n");
@@ -310,8 +300,8 @@ export function useAiEdit(editor: Editor | null) {
           }
 
           // Try to parse accumulated buffer and process edits
-          if (blockMapReceived) {
-            const parsed = tryParsePartialJSON(buffer);
+            if (blockMapReceived) {
+              const parsed = parsePartialEdits(buffer);
             if (parsed && parsed.edits) {
               processEdits(parsed.edits);
             }
@@ -331,7 +321,7 @@ export function useAiEdit(editor: Editor | null) {
         setAiInteractionState("complete");
       }
     },
-    [editor, tryParsePartialJSON, processEdits]
+    [editor, processEdits]
   );
 
   /**

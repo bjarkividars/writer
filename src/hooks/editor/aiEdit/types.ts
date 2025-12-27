@@ -7,6 +7,9 @@ export type EditState = {
   blockType?: BlockType;
   headingLevel?: number;
   blockNum?: number;
+  insertPos?: number;
+  insertedRange: { from: number; to: number } | null;
+  itemsSeen: string[];
   rangeDeleted: boolean;
   replacementSeen: string;
   replacementLength: number;
@@ -21,7 +24,8 @@ export type ShiftRangesParams = {
   itemId?: string;
   nextLength: number;
   blockMap: BlockItem[];
-  editsState: Map<number, EditState>;
+  editsState: Map<string, EditState>;
+  skipState?: EditState;
 };
 
 export type OperationDispatchArgs = {
@@ -29,5 +33,5 @@ export type OperationDispatchArgs = {
   state: EditState;
   operation: unknown;
   blockMap: BlockItem[];
-  editsState: Map<number, EditState>;
+  editsState: Map<string, EditState>;
 };

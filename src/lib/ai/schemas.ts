@@ -123,13 +123,22 @@ export const DeleteBlockOperation = z
   })
   .strict();
 
+export const TransformBlockOperation = z
+  .object({
+  type: z.literal("transform-block"),
+  blockType: BlockTypeSchema,
+  headingLevel: z.number().int().min(1).max(3).nullable(),
+  items: z.array(z.string()),
+  })
+  .strict();
+
 export const AiEditOperation = z.union([
   ReplaceOperation,
   InsertItemOperation,
   InsertBlockOperation,
   DeleteItemOperation,
   DeleteBlockOperation,
-  
+  TransformBlockOperation,
 ]);
 
 export type AiEditOperation = z.infer<typeof AiEditOperation>;
