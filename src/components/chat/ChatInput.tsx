@@ -9,7 +9,12 @@ import {
 import { ArrowUp } from "lucide-react";
 import { Button } from "@base-ui/react";
 
-export default function ChatInput() {
+type ChatInputProps = {
+  onSubmit: (value: string) => void;
+  disabled?: boolean;
+};
+
+export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -24,15 +29,14 @@ export default function ChatInput() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || disabled) return;
 
-    // TODO: Handle message submission
-    console.log("Submitting:", input);
+    onSubmit(input.trim());
     setInput("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !disabled) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -51,6 +55,7 @@ export default function ChatInput() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type your message here..."
+                  disabled={disabled}
                   className="block w-full resize-none overflow-hidden rounded-md bg-transparent py-2.5 px-3 text-sm text-foreground placeholder:text-foreground/50 focus:outline-none"
                   rows={1}
                 />
@@ -62,7 +67,8 @@ export default function ChatInput() {
               <div className="flex items-center justify-center h-[40px] pr-3">
                 <Button
                   type="submit"
-                  className="btn-primary w-6 h-6 rounded-full cursor-pointer"
+                  disabled={disabled}
+                  className="btn-primary w-6 h-6 rounded-full cursor-pointer disabled:opacity-60"
                 >
                   <ArrowUp className="w-4 h-4" />
                 </Button>

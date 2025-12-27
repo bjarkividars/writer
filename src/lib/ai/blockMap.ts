@@ -217,5 +217,40 @@ export function buildBlockMap(editor: Editor): BlockMapResult {
     return true;
   });
 
+  if (items.length === 0) {
+    let placeholderNode: ProseMirrorNode | null = null;
+    let placeholderPos = 0;
+
+    doc.descendants((node, pos) => {
+      if (
+        node.type.name === "paragraph" ||
+        node.type.name === "heading"
+      ) {
+        placeholderNode = node;
+        placeholderPos = pos;
+        return false;
+      }
+
+      return true;
+    });
+
+    if (placeholderNode) {
+      const proseMirrorNode = placeholderNode as ProseMirrorNode;
+      items.push({
+        id: "block-1.1",
+        blockNum: 1,
+        itemNum: 1,
+        blockType: proseMirrorNode.type.name === "heading" ? "heading" : "paragraph",
+        headingLevel:
+          proseMirrorNode.type.name === "heading"
+            ? proseMirrorNode.attrs.level
+            : undefined,
+        from: placeholderPos + 1,
+        to: placeholderPos + proseMirrorNode.nodeSize - 1,
+        text: "",
+      });
+    }
+  }
+
   return { items };
 }

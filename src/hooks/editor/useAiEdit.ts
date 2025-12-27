@@ -9,6 +9,14 @@ import { parsePartialEdits } from "@/hooks/editor/aiEdit/streamParser";
 
 type AiInteractionState = "idle" | "loading" | "streaming" | "complete";
 
+type AiEditMode = "inline" | "chat";
+
+type AiEditRunOptions = {
+  mode?: AiEditMode;
+  onMessageUpdate?: (message: string) => void;
+  onMessageComplete?: (message: string) => void;
+};
+
 /**
  * Return type of useAiEdit hook
  */
@@ -71,6 +79,7 @@ function getEditKey(index: number, edit: { target?: unknown; operation?: unknown
 export function useAiEdit(editor: Editor | null) {
   // Store block map from server
   const blockMapRef = useRef<BlockItem[]>([]);
+  const messageRef = useRef<string>("");
 
   // Simple state tracking per edit
   const editsState = useRef<Map<string, EditState>>(new Map());
@@ -237,12 +246,13 @@ export function useAiEdit(editor: Editor | null) {
    * Stream edits from the API
    */
   const streamEdits = useCallback(
-    async (payload: EditRequest) => {
+    async (payload: EditRequest, options?: AiEditRunOptions) => {
       setIsLoading(true);
       setError(null);
       setHasStartedStreaming(false);
       setAiInteractionState("loading");
       editsState.current.clear();
+      messageRef.current = "";
 
       // Lock editor
       if (editor) {
@@ -300,12 +310,19 @@ export function useAiEdit(editor: Editor | null) {
           }
 
           // Try to parse accumulated buffer and process edits
-            if (blockMapReceived) {
-              const parsed = parsePartialEdits(buffer);
-            if (parsed && parsed.edits) {
+          if (blockMapReceived) {
+            const parsed = parsePartialEdits(buffer);
+            if (parsed?.edits) {
               processEdits(parsed.edits);
             }
-        }
+            if (parsed?.message !== undefined) {
+              const nextMessage = parsed.message;
+              if (nextMessage !== messageRef.current) {
+                messageRef.current = nextMessage;
+                options?.onMessageUpdate?.(nextMessage);
+              }
+            }
+          }
         }
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
@@ -319,6 +336,7 @@ export function useAiEdit(editor: Editor | null) {
         }
         abortControllerRef.current = null;
         setAiInteractionState("complete");
+        options?.onMessageComplete?.(messageRef.current);
       }
     },
     [editor, processEdits]
@@ -328,7 +346,7 @@ export function useAiEdit(editor: Editor | null) {
    * Run an AI edit based on an instruction
    */
   const run = useCallback(
-    (instruction: string) => {
+    (instruction: string, options?: AiEditRunOptions) => {
       if (!editor) {
         console.error("[AI Edit] Editor not available");
         return;
@@ -342,9 +360,8 @@ export function useAiEdit(editor: Editor | null) {
         const documentText = editor.getText();
         const { items: blockMapItems } = buildBlockMap(editor);
 
-        // Build selection info
         const selection =
-          !empty && from !== to
+          options?.mode !== "chat" && !empty && from !== to
             ? {
                 from,
                 to,
@@ -360,10 +377,11 @@ export function useAiEdit(editor: Editor | null) {
           selection,
           documentText,
           blockMap: blockMapItems,
+          mode: options?.mode ?? "inline",
         });
 
         // Start streaming
-        streamEdits(payload);
+        streamEdits(payload, options);
       } catch (err) {
         console.error("[AI Edit] Failed to build request:", err);
         setError(err as Error);

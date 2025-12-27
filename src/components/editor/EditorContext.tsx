@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { Editor, JSONContent } from "@tiptap/react";
 import { useAiEdit } from "@/hooks/editor/useAiEdit";
+import { useChatContext } from "@/components/chat/ChatContext";
 
 type SelectionRange = { from: number; to: number } | null;
 
@@ -26,6 +27,14 @@ type TextFormatValue =
 type CompletedPrompt = {
   text: string;
   timestamp: number;
+};
+
+type AiEditMode = "inline" | "chat";
+
+type AiInstructionOptions = {
+  mode?: AiEditMode;
+  onMessageUpdate?: (message: string) => void;
+  onMessageComplete?: (message: string) => void;
 };
 
 type UndoState = {
@@ -46,7 +55,7 @@ type EditorContextValue = {
   isAiMode: boolean;
   selectedText: string;
   // AI editing
-  submitAiInstruction: (instruction: string) => void;
+  submitAiInstruction: (instruction: string, options?: AiInstructionOptions) => void;
   undoLastEdit: () => void;
   aiInteractionState: "idle" | "loading" | "streaming" | "complete";
   completedPrompt: CompletedPrompt | null;
@@ -91,6 +100,7 @@ export function EditorProvider({
 
   // AI editing hook
   const aiEdit = useAiEdit(editor);
+  const chat = useChatContext();
 
   // Update formatting states when selection changes
   useEffect(() => {
@@ -231,7 +241,7 @@ export function EditorProvider({
 
   // Submit AI instruction: store undo state and start edit
   const submitAiInstruction = useCallback(
-    (instruction: string) => {
+    (instruction: string, options?: AiInstructionOptions) => {
       if (!editor) return;
 
       // Store undo state BEFORE running edit
@@ -243,11 +253,15 @@ export function EditorProvider({
         selectedText,
       });
 
-      // Store the instruction for history
-      setCompletedPrompt({
-        text: instruction,
-        timestamp: Date.now(),
-      });
+      // Store the instruction for history (inline only)
+      if (options?.mode === "chat") {
+        setCompletedPrompt(null);
+      } else {
+        setCompletedPrompt({
+          text: instruction,
+          timestamp: Date.now(),
+        });
+      }
 
       // Update highlight with loading attribute to show shimmer effect
       if (highlightedRange) {
@@ -258,10 +272,33 @@ export function EditorProvider({
           .run();
       }
 
+      let inlineMessageId: string | null = null;
+      const handleMessageUpdate =
+        options?.onMessageUpdate ??
+        ((message: string) => {
+          if (!message.trim()) return;
+          if (!inlineMessageId) {
+            inlineMessageId = chat.startModelMessage("");
+          }
+          chat.setMessageContent(inlineMessageId, message);
+        });
+
+      const handleMessageComplete =
+        options?.onMessageComplete ??
+        ((message: string) => {
+          if (!inlineMessageId) return;
+          chat.setMessageContent(inlineMessageId, message);
+          chat.finishMessage(inlineMessageId);
+        });
+
       // Start the edit (useAiEdit will handle state transitions)
-      aiEdit.run(instruction);
+      aiEdit.run(instruction, {
+        mode: options?.mode ?? "inline",
+        onMessageUpdate: handleMessageUpdate,
+        onMessageComplete: handleMessageComplete,
+      });
     },
-    [editor, aiEdit, highlightedRange, selectedText]
+    [editor, aiEdit, highlightedRange, selectedText, chat]
   );
 
   // Undo last edit: restore original text

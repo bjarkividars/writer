@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         // Build the prompt with structured context
         const prompt = buildPrompt({
             instruction: request.instruction,
+            mode: request.mode ?? "inline",
             selection: request.selection,
             items,
         });
@@ -119,6 +120,19 @@ function buildBlockMapFromText(text: string) {
     const items: BlockItem[] = [];
 
     let currentPos = 0;
+    if (lines.length === 0) {
+        items.push({
+            id: "block-1.1",
+            blockNum: 1,
+            itemNum: 1,
+            blockType: "paragraph",
+            from: 0,
+            to: 0,
+            text: "",
+        });
+        return { items };
+    }
+
     lines.forEach((line, lineIdx) => {
         const blockNum = lineIdx + 1;
         const sentenceTexts = tokenizer.tokenize(line);
@@ -169,10 +183,11 @@ function buildBlockMapFromText(text: string) {
  */
 function buildPrompt(params: {
     instruction: string;
+    mode: "inline" | "chat";
     selection?: { from: number; to: number; text: string };
     items: BlockItem[];
 }): string {
-    const { instruction, selection, items } = params;
+    const { instruction, mode, selection, items } = params;
 
     const itemsText = items
         .map((item) => {
@@ -192,6 +207,8 @@ function buildPrompt(params: {
 
 **USER INSTRUCTION:**
 ${instruction}
+
+**MODE:** ${mode}
 
 ${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}
 **AVAILABLE ITEMS:**
@@ -232,5 +249,11 @@ ${itemsText}
 9. If multiple paragraphs are needed, use multiple insert-block operations (one per paragraph).
 10. Item IDs refer to existing items only; never invent new IDs.
 11. When inserting multiple blocks after/before the same itemId, keep them ordered in the edits array.
-12. Always target items using "block-item" with an itemId`;
+12. Always target items using "block-item" with an itemId.
+13. Always include a "message" field in the output JSON.
+14. message must be plain text with no quotes or newlines.
+15. If MODE=chat, message must be a 1-2 sentence summary of edits, or a clarification question if needed.
+16. If MODE=inline, only set message when you need clarification; otherwise set message to "".
+17. If you need clarification, set edits to [] and ask the question in message.
+18. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
 }

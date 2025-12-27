@@ -46,6 +46,7 @@ export type Sentence = z.infer<typeof Sentence>;
 export const EditRequest = z
   .object({
   instruction: z.string(),
+  mode: z.enum(["inline", "chat"]).optional(),
   selection: z
     .object({
       from: z.number().int().min(0),
@@ -188,6 +189,11 @@ export const AiEditOutput = z
     .array(AiEditOp)
     .describe(
       "Array of edit operations to apply. Keep minimal (1-3 edits). Can be empty array if no edits yet."
+    ),
+  message: z
+    .string()
+    .describe(
+      "Brief summary or clarification question for the user. Use an empty string if not needed."
     ),
   complete: z
     .boolean()

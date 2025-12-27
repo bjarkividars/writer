@@ -1,4 +1,4 @@
-type ParsedEdits = { edits?: unknown[] } | null;
+type ParsedEdits = { edits?: unknown[]; message?: string } | null;
 
 function isArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
@@ -8,9 +8,14 @@ function tryParseCompleteJSON(text: string): ParsedEdits {
   try {
     const parsed = JSON.parse(text) as unknown;
     if (typeof parsed === "object" && parsed !== null && "edits" in parsed) {
-      const editsValue = (parsed as { edits: unknown }).edits;
+      const { edits: editsValue, message } = parsed as {
+        edits: unknown;
+        message?: unknown;
+      };
       if (isArray(editsValue)) {
-        return { edits: editsValue };
+        const textMessage =
+          typeof message === "string" ? message : undefined;
+        return { edits: editsValue, message: textMessage };
       }
     }
   } catch {
@@ -107,6 +112,7 @@ export function parsePartialEdits(text: string): ParsedEdits {
   if (complete) return complete;
 
   const edits: unknown[] = [];
+  const message = extractPartialStringField(text, "message");
   const editMatches = text.matchAll(/\{"target"\s*:\s*\{([^}]+)\}/g);
 
   for (const editMatch of editMatches) {
@@ -163,5 +169,12 @@ export function parsePartialEdits(text: string): ParsedEdits {
     }
   }
 
-  return edits.length > 0 ? { edits } : null;
+  if (edits.length > 0 || message !== null) {
+    return {
+      edits: edits.length > 0 ? edits : undefined,
+      message: message ?? undefined,
+    };
+  }
+
+  return null;
 }
