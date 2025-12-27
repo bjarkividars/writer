@@ -22,6 +22,7 @@ type ChatContextValue = {
   startModelMessage: (initialContent?: string) => string;
   setMessageContent: (id: string, content: string) => void;
   finishMessage: (id: string) => void;
+  replaceMessages: (messages: ChatMessage[]) => void;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -69,6 +70,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const replaceMessages = useCallback((nextMessages: ChatMessage[]) => {
+    setMessages(nextMessages);
+  }, []);
+
   const value = useMemo(
     () => ({
       messages,
@@ -76,8 +81,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       startModelMessage,
       setMessageContent,
       finishMessage,
+      replaceMessages,
     }),
-    [messages, addUserMessage, startModelMessage, setMessageContent, finishMessage]
+    [
+      messages,
+      addUserMessage,
+      startModelMessage,
+      setMessageContent,
+      finishMessage,
+      replaceMessages,
+    ]
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
