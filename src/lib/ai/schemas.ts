@@ -45,12 +45,13 @@ export type Sentence = z.infer<typeof Sentence>;
  */
 export const EditRequest = z
   .object({
-  instruction: z.string(),
-  mode: z.enum(["inline", "chat"]).optional(),
-  selection: z
-    .object({
-      from: z.number().int().min(0),
-      to: z.number().int().min(0),
+    instruction: z.string(),
+    mode: z.enum(["inline", "chat"]).optional(),
+    sessionId: z.string().min(1).optional(),
+    selection: z
+      .object({
+        from: z.number().int().min(0),
+        to: z.number().int().min(0),
       text: z.string(),
     })
     .strict()

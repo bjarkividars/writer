@@ -43,9 +43,9 @@ export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps
   };
 
   return (
-    <div className="sticky bottom-0 pb-4 bg-muted before:content-[''] before:absolute before:-top-4 before:left-0 before:right-0 before:h-4 before:bg-linear-to-b before:from-transparent before:to-muted">
+    <div className="sticky bottom-0 pb-4 bg-surface before:content-[''] before:absolute before:-top-4 before:left-0 before:right-0 before:h-4 before:bg-linear-to-b before:from-transparent before:to-surface">
       <form onSubmit={handleSubmit}>
-        <div className="bg-background rounded-lg min-h-[32px] flex items-stretch">
+        <div className="bg-background rounded-lg min-h-[32px] flex items-stretch border border-border">
           <ScrollAreaRoot className="w-full">
             <ScrollAreaViewport className="max-h-[180px] rounded-md">
               <ScrollAreaContent>
@@ -68,7 +68,7 @@ export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps
                 <Button
                   type="submit"
                   disabled={disabled}
-                  className="btn-primary w-6 h-6 rounded-full cursor-pointer disabled:opacity-60"
+                  className="btn-primary w-6 h-6 rounded-md cursor-pointer disabled:opacity-60"
                 >
                   <ArrowUp className="w-4 h-4" />
                 </Button>

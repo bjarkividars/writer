@@ -51,7 +51,7 @@ export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
               collapsible
               collapsedSize="0%"
             >
-              <div className="h-full relative overflow-y-auto bg-muted">
+              <div className="h-full relative overflow-y-auto bg-surface">
                 <Chat />
               </div>
             </Panel>

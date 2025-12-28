@@ -3,6 +3,8 @@ import { openai } from "@ai-sdk/openai";
 import { streamText, Output } from "ai";
 import { NextRequest } from "next/server";
 import { SentenceTokenizer } from "natural";
+import { prisma } from "@/lib/prisma";
+import { requireSessionAccess } from "@/lib/session-access";
 import {
     EditRequest,
     AiEditOutput,
@@ -32,9 +34,38 @@ export async function POST(req: NextRequest) {
             : buildBlockMapFromText(request.documentText);
         const { items } = blockMapResult;
 
+        let chatHistory: { role: "user" | "model"; content: string }[] = [];
+        if (request.sessionId) {
+            const access = await requireSessionAccess(request.sessionId);
+            if (!access.ok) {
+                return Response.json({ error: access.error }, { status: access.status });
+            }
+
+            const messages = await prisma.chatMessage.findMany({
+                where: { sessionId: request.sessionId },
+                orderBy: { createdAt: "desc" },
+                take: 20,
+                select: { role: true, content: true },
+            });
+
+            chatHistory = messages.reverse().map((message) => ({
+                role: message.role as "user" | "model",
+                content: message.content,
+            }));
+
+            const lastMessage = chatHistory.at(-1);
+            if (
+                lastMessage?.role === "user" &&
+                lastMessage.content.trim() === request.instruction.trim()
+            ) {
+                chatHistory = chatHistory.slice(0, -1);
+            }
+        }
+
         console.log("[BE] Built block map:", {
             itemsCount: items.length,
             selection: request.selection,
+            chatHistoryCount: chatHistory.length,
         });
 
         // Build the prompt with structured context
@@ -43,6 +74,7 @@ export async function POST(req: NextRequest) {
             mode: request.mode ?? "inline",
             selection: request.selection,
             items,
+            chatHistory,
         });
         console.log("[BE] Built prompt, length:", prompt.length);
 
@@ -186,8 +218,9 @@ function buildPrompt(params: {
     mode: "inline" | "chat";
     selection?: { from: number; to: number; text: string };
     items: BlockItem[];
+    chatHistory: { role: "user" | "model"; content: string }[];
 }): string {
-    const { instruction, mode, selection, items } = params;
+    const { instruction, mode, selection, items, chatHistory } = params;
 
     const itemsText = items
         .map((item) => {
@@ -203,6 +236,13 @@ function buildPrompt(params: {
         })
         .join("\n");
 
+    const chatHistoryText = chatHistory
+        .map((message) => `${message.role}: ${message.content}`)
+        .join("\n");
+    const chatHistorySection = chatHistoryText
+        ? `**CHAT HISTORY:**\n${chatHistoryText}\n\n`
+        : "";
+
     return `You are a document editor. Apply the user's instruction using markdown formatting.
 
 **USER INSTRUCTION:**
@@ -210,7 +250,7 @@ ${instruction}
 
 **MODE:** ${mode}
 
-${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}
+${chatHistorySection}${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}
 **AVAILABLE ITEMS:**
 ${itemsText}
 
@@ -252,8 +292,9 @@ ${itemsText}
 12. Always target items using "block-item" with an itemId.
 13. Always include a "message" field in the output JSON.
 14. message must be plain text with no quotes or newlines.
-15. If MODE=chat, message must be a 1-2 sentence summary of edits, or a clarification question if needed.
-16. If MODE=inline, only set message when you need clarification; otherwise set message to "".
-17. If you need clarification, set edits to [] and ask the question in message.
-18. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
+15. message must be human-readable and user-facing; do not mention block IDs, operations, internal rules, or technical terms.
+16. If MODE=chat, message must be a 1-2 sentence summary of edits, or a clarification question if needed.
+17. If MODE=inline, only set message when you need clarification; otherwise set message to "".
+18. If you need clarification, set edits to [] and ask the question in message.
+19. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
 }

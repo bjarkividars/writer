@@ -7,6 +7,7 @@
 @theme {
   /* Light mode colors (default) */
   --color-background: hsl(0 0% 100%);
+  --color-surface: hsl(42 6% 98%);
   --color-muted: hsl(45 9% 97%);
   --color-hover: hsl(45 8% 95%);
   --color-foreground: hsl(40 6% 20%);
@@ -31,6 +32,7 @@
 @layer base {
   .dark {
     --color-background: hsl(0 0% 10%);
+    --color-surface: hsl(0 0% 16%);
     --color-muted: hsl(0 0% 14%);
     --color-hover: hsl(0 0% 18%);
     --color-foreground: hsl(40 6% 90%);

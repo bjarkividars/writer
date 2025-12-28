@@ -35,6 +35,7 @@ type AiEditMode = "inline" | "chat";
 
 type AiInstructionOptions = {
   mode?: AiEditMode;
+  sessionId?: string;
   onMessageUpdate?: (message: string) => void;
   onMessageComplete?: (message: string) => void;
 };
@@ -301,14 +302,25 @@ export function EditorProvider({
           chat.finishMessage(inlineMessageId);
         });
 
-      // Start the edit (useAiEdit will handle state transitions)
-      aiEdit.run(instruction, {
-        mode: options?.mode ?? "inline",
-        onMessageUpdate: handleMessageUpdate,
-        onMessageComplete: handleMessageComplete,
-      });
+      const sessionPromise = options?.sessionId
+        ? Promise.resolve(options.sessionId)
+        : ensureSession();
+
+      void sessionPromise
+        .then((sessionId) => {
+          // Start the edit (useAiEdit will handle state transitions)
+          aiEdit.run(instruction, {
+            mode: options?.mode ?? "inline",
+            sessionId,
+            onMessageUpdate: handleMessageUpdate,
+            onMessageComplete: handleMessageComplete,
+          });
+        })
+        .catch((err) => {
+          console.error("[EditorContext] Failed to ensure session:", err);
+        });
     },
-    [editor, aiEdit, highlightedRange, selectedText, chat]
+    [editor, aiEdit, highlightedRange, selectedText, chat, ensureSession]
   );
 
   // Undo last edit: restore original text

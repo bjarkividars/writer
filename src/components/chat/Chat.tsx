@@ -59,26 +59,29 @@ export default function Chat() {
     );
     const modelMessageId = startModelMessage("");
 
-    submitAiInstruction(trimmed, {
-      mode: "chat",
-      onMessageUpdate: (message) => {
-        setMessageContent(modelMessageId, message);
-      },
-      onMessageComplete: (message) => {
-        const finalMessage =
-          message.trim().length > 0 ? message : "Edits applied.";
-        setMessageContent(modelMessageId, finalMessage);
-        finishMessage(modelMessageId);
-        void sessionPromise.then((sessionId) =>
-          appendMessage(sessionId, "model", finalMessage)
-        );
-      },
+    void sessionPromise.then((sessionId) => {
+      submitAiInstruction(trimmed, {
+        mode: "chat",
+        sessionId,
+        onMessageUpdate: (message) => {
+          setMessageContent(modelMessageId, message);
+        },
+        onMessageComplete: (message) => {
+          const finalMessage =
+            message.trim().length > 0 ? message : "Edits applied.";
+          setMessageContent(modelMessageId, finalMessage);
+          finishMessage(modelMessageId);
+          void sessionPromise.then((sessionId) =>
+            appendMessage(sessionId, "model", finalMessage)
+          );
+        },
+      });
     });
   };
 
   return (
     <div className="flex min-h-full flex-col gap-4 px-4">
-      <div className="flex flex-1 flex-col gap-3 pt-4">
+      <div className="flex flex-1 flex-col gap-3 pt-16">
         {messages.map((message) =>
           message.role === "model" ? (
             <ModelMessage key={message.id}>

@@ -13,6 +13,7 @@ type AiEditMode = "inline" | "chat";
 
 type AiEditRunOptions = {
   mode?: AiEditMode;
+  sessionId?: string;
   onMessageUpdate?: (message: string) => void;
   onMessageComplete?: (message: string) => void;
 };
@@ -389,6 +390,7 @@ export function useAiEdit(editor: Editor | null) {
           documentText,
           blockMap: blockMapItems,
           mode: options?.mode ?? "inline",
+          sessionId: options?.sessionId,
         });
 
         // Start streaming
