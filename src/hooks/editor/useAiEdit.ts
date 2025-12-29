@@ -86,7 +86,7 @@ function normalizeOptions(options: unknown[]): AiEditOption[] {
       }
       const trimmedTitle = title.trim();
       const trimmedContent = content.trim();
-      if (!trimmedTitle || !trimmedContent) return null;
+      if (!trimmedTitle && !trimmedContent) return null;
       return { title: trimmedTitle, content: trimmedContent };
     })
     .filter((option): option is AiEditOption => option !== null);

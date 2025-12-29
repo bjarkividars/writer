@@ -104,6 +104,83 @@ function extractStringArrayField(text: string, key: string): string[] | null {
   return items;
 }
 
+function extractOptions(text: string) {
+  const keyIndex = text.search(/"options"\s*:\s*\[/);
+  if (keyIndex < 0) return null;
+
+  const arrayStart = text.indexOf("[", keyIndex);
+  if (arrayStart < 0) return null;
+
+  const options: { title: string; content: string }[] = [];
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let objectStart = -1;
+
+  for (let i = arrayStart + 1; i < text.length; i += 1) {
+    const ch = text[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch === "\"") {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (ch === "{") {
+      if (depth === 0) {
+        objectStart = i;
+      }
+      depth += 1;
+      continue;
+    }
+
+    if (ch === "}") {
+      if (depth > 0) {
+        depth -= 1;
+        if (depth === 0 && objectStart >= 0) {
+          const objectText = text.slice(objectStart, i + 1);
+          const title = extractPartialStringField(objectText, "title") ?? "";
+          const content = extractPartialStringField(objectText, "content") ?? "";
+          if (title || content) {
+            options.push({ title, content });
+          }
+          objectStart = -1;
+        }
+      }
+      continue;
+    }
+
+    if (ch === "]") {
+      break;
+    }
+  }
+
+  if (objectStart >= 0) {
+    const objectText = text.slice(objectStart);
+    const title = extractPartialStringField(objectText, "title") ?? "";
+    const content = extractPartialStringField(objectText, "content") ?? "";
+    if (title || content) {
+      options.push({ title, content });
+    }
+  }
+
+  return options;
+}
+
 function getScopedEditText(text: string, editStartPos: number) {
   const afterTarget = text.substring(editStartPos);
   const nextTargetOffset = afterTarget.slice(1).search(/\{"target"\s*:/);
@@ -119,6 +196,7 @@ export function parsePartialEdits(text: string): ParsedEdits {
 
   const edits: unknown[] = [];
   const message = extractPartialStringField(text, "message");
+  const options = extractOptions(text);
   const editMatches = text.matchAll(/\{"target"\s*:\s*\{([^}]+)\}/g);
 
   for (const editMatch of editMatches) {
@@ -175,10 +253,11 @@ export function parsePartialEdits(text: string): ParsedEdits {
     }
   }
 
-  if (edits.length > 0 || message !== null) {
+  if (edits.length > 0 || message !== null || (options && options.length > 0)) {
     return {
       edits: edits.length > 0 ? edits : undefined,
       message: message ?? undefined,
+      options: options && options.length > 0 ? options : undefined,
     };
   }
 

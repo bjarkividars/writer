@@ -31,12 +31,16 @@ export default function ChatOptions({
                 : "flex w-full flex-col gap-1 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm text-foreground transition hover:border-foreground/20 hover:bg-surface/60 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             }
           >
-            <span className="text-sm font-medium text-foreground">
-              {option.title}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {option.content}
-            </span>
+            {option.title ? (
+              <span className="text-sm font-medium text-foreground">
+                {option.title}
+              </span>
+            ) : null}
+            {option.content ? (
+              <span className="text-xs text-muted-foreground">
+                {option.content}
+              </span>
+            ) : null}
           </button>
         );
       })}

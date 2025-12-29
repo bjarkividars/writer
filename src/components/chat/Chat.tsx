@@ -289,13 +289,17 @@ export default function Chat() {
             const persistedId =
               message.persistedId ?? (message.id.startsWith("msg-") ? undefined : message.id);
             const canSelect =
-              isLatest && !isBusy && selectedIndex === undefined && !!persistedId;
+              isLatest &&
+              !isBusy &&
+              !message.streaming &&
+              selectedIndex === undefined &&
+              !!persistedId;
 
             return (
               <ModelMessage key={message.id}>
                 <div className="flex flex-col gap-3">
                   {renderModelContent(message)}
-                  {!message.streaming && hasOptions ? (
+                  {hasOptions ? (
                     <ChatOptions
                       options={message.options ?? []}
                       selectedIndex={selectedIndex}
