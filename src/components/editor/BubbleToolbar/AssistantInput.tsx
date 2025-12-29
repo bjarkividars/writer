@@ -6,6 +6,8 @@ import {
   ScrollAreaRoot,
   ScrollAreaViewport,
   ScrollAreaContent,
+  ScrollAreaScrollbar,
+  ScrollAreaThumb,
 } from "@/components/ScrollArea";
 
 type AssistantInputProps = {
@@ -119,6 +121,9 @@ export default function AssistantInput({
             />
           </ScrollAreaContent>
         </ScrollAreaViewport>
+        <ScrollAreaScrollbar>
+          <ScrollAreaThumb />
+        </ScrollAreaScrollbar>
       </ScrollAreaRoot>
 
       {expanded && (

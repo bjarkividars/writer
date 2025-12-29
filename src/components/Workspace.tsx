@@ -1,23 +1,29 @@
 "use client";
 
 import TipTapEditor from "@/components/editor/TipTap/TipTapEditor";
-import { Panel, Group, Separator } from "react-resizable-panels";
+import { Panel, Group, Separator, usePanelRef } from "react-resizable-panels";
+import {
+  ScrollAreaRoot,
+  ScrollAreaViewport,
+  ScrollAreaContent,
+  ScrollAreaScrollbar,
+  ScrollAreaThumb,
+} from "@/components/ScrollArea";
 import Chat from "./chat/Chat";
 import { useEditor } from "@tiptap/react";
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { editorExtensions } from "@/editor/extensions";
 import { EditorProvider } from "@/components/editor/EditorContext";
 import { ChatProvider } from "@/components/chat/ChatContext";
-import { SessionProvider } from "@/components/session/SessionContext";
 import { SessionHydrator } from "@/components/session/SessionHydrator";
 import EditorEmptyState from "@/components/editor/EditorEmptyState";
+import { LoadingProvider } from "@/components/LoadingProvider";
+import { ChevronsLeft, Equal } from "lucide-react";
 
-type WorkspaceProps = {
-  initialSessionId?: string | null;
-};
-
-export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
+export default function Workspace() {
   const editorRootRef = useRef<HTMLDivElement>(null);
+  const chatPanelRef = usePanelRef();
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: editorExtensions,
@@ -28,23 +34,81 @@ export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
       },
     },
   });
+  const handleDocumentPanelResize = useCallback(
+    ({ inPixels }: { inPixels: number }) => {
+      if (!Number.isFinite(inPixels)) return;
+      document.documentElement.style.setProperty(
+        "--doc-panel-width",
+        `${inPixels}px`
+      );
+    },
+    []
+  );
+  const handleChatPanelResize = useCallback(
+    ({ inPixels }: { inPixels: number }) => {
+      if (!Number.isFinite(inPixels)) return;
+      setIsChatCollapsed(inPixels <= 1);
+    },
+    []
+  );
+  const handleSeparatorClick = useCallback(() => {
+    if (!isChatCollapsed) return;
+    chatPanelRef.current?.expand();
+  }, [isChatCollapsed, chatPanelRef]);
+
+  useEffect(() => {
+    return () => {
+      document.documentElement.style.removeProperty("--doc-panel-width");
+    };
+  }, []);
 
   return (
-    <SessionProvider initialSessionId={initialSessionId}>
-      <ChatProvider>
-        <EditorProvider editor={editor} editorRootRef={editorRootRef}>
-          <SessionHydrator />
+    <ChatProvider>
+      <EditorProvider editor={editor} editorRootRef={editorRootRef}>
+        <SessionHydrator />
+        <LoadingProvider>
           <Group orientation="horizontal" className="mx-0 flex h-full w-full">
-            <Panel className="h-full">
-              <div className="relative h-full overflow-y-auto">
-                <EditorEmptyState />
-                <div className="mx-auto min-h-full w-full max-w-[8.5in]">
-                  <TipTapEditor editor={editor} editorRootRef={editorRootRef} />
-                </div>
-              </div>
+            <Panel className="h-full" onResize={handleDocumentPanelResize}>
+              <ScrollAreaRoot
+                className="relative h-full min-h-full"
+                showBottomFade={false}
+              >
+                <ScrollAreaViewport className="h-full min-h-full">
+                  <ScrollAreaContent className="relative min-h-full">
+                    <EditorEmptyState />
+                    <div className="mx-auto min-h-full w-full max-w-[8.5in]">
+                      <TipTapEditor
+                        editor={editor}
+                        editorRootRef={editorRootRef}
+                      />
+                    </div>
+                  </ScrollAreaContent>
+                </ScrollAreaViewport>
+                <ScrollAreaScrollbar>
+                  <ScrollAreaThumb />
+                </ScrollAreaScrollbar>
+              </ScrollAreaRoot>
             </Panel>
 
-            <Separator />
+            <Separator
+              className="flex items-center justify-center chat-separator"
+              data-chat-collapsed={isChatCollapsed ? "true" : "false"}
+            >
+              <button
+                type="button"
+                onClick={handleSeparatorClick}
+                className="chat-separator-button"
+                aria-label={
+                  isChatCollapsed ? "Expand chat panel" : "Resize chat panel"
+                }
+              >
+                {isChatCollapsed ? (
+                  <ChevronsLeft className="w-4 h-4" />
+                ) : (
+                  <Equal className="w-4 h-4 rotate-90" />
+                )}
+              </button>
+            </Separator>
 
             <Panel
               defaultSize="30%"
@@ -53,14 +117,26 @@ export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
               collapsible
               collapsedSize="0%"
               className="h-full"
+              onResize={handleChatPanelResize}
+              panelRef={chatPanelRef}
             >
-              <div className="h-full relative overflow-y-auto bg-surface">
-                <Chat />
-              </div>
+              <ScrollAreaRoot
+                className="relative h-full min-h-full"
+                showBottomFade={false}
+              >
+                <ScrollAreaViewport className="h-full min-h-full">
+                  <ScrollAreaContent className="relative min-h-full">
+                    <Chat />
+                  </ScrollAreaContent>
+                </ScrollAreaViewport>
+                <ScrollAreaScrollbar>
+                  <ScrollAreaThumb />
+                </ScrollAreaScrollbar>
+              </ScrollAreaRoot>
             </Panel>
           </Group>
-        </EditorProvider>
-      </ChatProvider>
-    </SessionProvider>
+        </LoadingProvider>
+      </EditorProvider>
+    </ChatProvider>
   );
 }

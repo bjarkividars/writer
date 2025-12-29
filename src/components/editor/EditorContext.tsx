@@ -133,10 +133,12 @@ export function EditorProvider({
     updateEmptyState();
     editor.on("update", updateEmptyState);
     editor.on("create", updateEmptyState);
+    editor.on("transaction", updateEmptyState);
 
     return () => {
       editor.off("update", updateEmptyState);
       editor.off("create", updateEmptyState);
+      editor.off("transaction", updateEmptyState);
     };
   }, [editor]);
 

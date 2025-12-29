@@ -276,8 +276,8 @@ export default function Chat() {
       <div
         className={
           messagesEmpty
-            ? "flex flex-1 items-center justify-center pt-16"
-            : "flex flex-1 flex-col gap-3 pt-16"
+            ? "flex flex-1 items-center justify-center pt-10"
+            : "flex flex-1 flex-col gap-5 pt-10"
         }
       >
         {messagesEmpty ? (

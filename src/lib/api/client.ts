@@ -5,6 +5,7 @@ import {
   CreateSessionResponseSchema,
   GenerateSessionTitleResponseSchema,
   GetSessionResponseSchema,
+  GetSessionsResponseSchema,
   SaveDocumentRequestSchema,
   SaveDocumentResponseSchema,
   SelectMessageOptionRequestSchema,
@@ -94,4 +95,34 @@ export async function generateSessionTitle(sessionId: string) {
     },
     GenerateSessionTitleResponseSchema
   );
+}
+
+export async function getSessions() {
+  return fetchJson(
+    "/api/sessions",
+    { method: "GET" },
+    GetSessionsResponseSchema
+  );
+}
+
+export async function deleteSession(sessionId: string) {
+  const response = await fetch(`/api/session/${sessionId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function renameSession(sessionId: string, title: string) {
+  const response = await fetch(`/api/session/${sessionId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
 }

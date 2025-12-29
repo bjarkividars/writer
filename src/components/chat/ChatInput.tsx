@@ -5,6 +5,8 @@ import {
   ScrollAreaRoot,
   ScrollAreaViewport,
   ScrollAreaContent,
+  ScrollAreaScrollbar,
+  ScrollAreaThumb,
 } from "@/components/ScrollArea";
 import { ArrowUp } from "lucide-react";
 import { Button } from "@base-ui/react";
@@ -43,9 +45,9 @@ export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps
   };
 
   return (
-    <div className="sticky bottom-0 pb-4 bg-surface before:content-[''] before:absolute before:-top-4 before:left-0 before:right-0 before:h-4 before:bg-linear-to-b before:from-transparent before:to-surface">
+    <div className="sticky bottom-0 pb-4 bg-background before:content-[''] before:absolute before:-top-4 before:left-0 before:right-0 before:h-4 before:bg-linear-to-b before:from-transparent before:to-background">
       <form onSubmit={handleSubmit}>
-        <div className="bg-background rounded-lg min-h-[32px] flex items-stretch border border-border">
+        <div className="bg-surface rounded-lg min-h-[32px] flex items-stretch border border-border">
           <ScrollAreaRoot className="w-full">
             <ScrollAreaViewport className="max-h-[180px] rounded-md">
               <ScrollAreaContent>
@@ -61,6 +63,9 @@ export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps
                 />
               </ScrollAreaContent>
             </ScrollAreaViewport>
+            <ScrollAreaScrollbar>
+              <ScrollAreaThumb />
+            </ScrollAreaScrollbar>
           </ScrollAreaRoot>
           {input.trim() && (
             <div className="flex shrink-0 items-end">

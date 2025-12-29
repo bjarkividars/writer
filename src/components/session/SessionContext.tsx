@@ -4,12 +4,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import { createSession, generateSessionTitle } from "@/lib/api/client";
+import { useSidebarContext } from "@/components/sidebar/SidebarContext";
 
 type SessionSource = "url" | "created" | null;
 
@@ -21,26 +24,40 @@ type SessionContextValue = {
   title: string | null;
   setTitle: (title: string | null) => void;
   requestTitle: () => Promise<string | null>;
+  isHydrated: boolean;
+  setHydrated: (hydrated: boolean) => void;
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 type SessionProviderProps = {
   children: ReactNode;
-  initialSessionId?: string | null;
 };
 
-export function SessionProvider({
-  children,
-  initialSessionId = null,
-}: SessionProviderProps) {
-  const [sessionId, setSessionIdState] = useState<string | null>(initialSessionId);
-  const [sessionSource, setSessionSource] = useState<SessionSource>(
-    initialSessionId ? "url" : null
-  );
+export function SessionProvider({ children }: SessionProviderProps) {
+  const pathname = usePathname();
+  const [sessionId, setSessionIdState] = useState<string | null>(null);
+  const [sessionSource, setSessionSource] = useState<SessionSource>(null);
   const [title, setTitle] = useState<string | null>(null);
+  const [isHydrated, setHydrated] = useState(false);
   const createPromiseRef = useRef<Promise<string> | null>(null);
   const titlePromiseRef = useRef<Promise<string | null> | null>(null);
+  const { refreshSessions } = useSidebarContext();
+
+  // Extract sessionId from pathname
+  useEffect(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    const urlSessionId = segments.length > 0 ? segments[0] : null;
+
+    if (urlSessionId && urlSessionId !== sessionId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSessionIdState(urlSessionId);
+      setSessionSource("url");
+    } else if (!urlSessionId && sessionId) {
+      setSessionIdState(null);
+      setSessionSource(null);
+    }
+  }, [pathname, sessionId]);
 
   const setSessionId = useCallback(
     (nextSessionId: string | null, source?: SessionSource) => {
@@ -73,6 +90,8 @@ export function SessionProvider({
       .then((response) => {
         setSessionId(response.sessionId, "created");
         updateUrl(response.sessionId);
+        // Refresh sidebar to show new session
+        refreshSessions();
         return response.sessionId;
       })
       .finally(() => {
@@ -81,7 +100,7 @@ export function SessionProvider({
 
     createPromiseRef.current = promise;
     return promise;
-  }, [sessionId, setSessionId, updateUrl]);
+  }, [sessionId, setSessionId, updateUrl, refreshSessions]);
 
   const requestTitle = useCallback(async () => {
     if (title) {
@@ -97,6 +116,8 @@ export function SessionProvider({
       .then((response) => {
         if (response.title) {
           setTitle(response.title);
+          // Refresh sidebar to show updated title
+          refreshSessions();
         }
         return response.title ?? null;
       })
@@ -106,7 +127,7 @@ export function SessionProvider({
 
     titlePromiseRef.current = promise;
     return promise;
-  }, [ensureSession, title, setTitle]);
+  }, [ensureSession, title, setTitle, refreshSessions]);
 
   const value = useMemo(
     () => ({
@@ -117,6 +138,8 @@ export function SessionProvider({
       title,
       setTitle,
       requestTitle,
+      isHydrated,
+      setHydrated,
     }),
     [
       sessionId,
@@ -126,6 +149,8 @@ export function SessionProvider({
       title,
       setTitle,
       requestTitle,
+      isHydrated,
+      setHydrated,
     ]
   );
 

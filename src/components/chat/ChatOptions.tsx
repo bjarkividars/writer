@@ -27,7 +27,7 @@ export default function ChatOptions({
             onClick={() => onSelect(option, index)}
             className={
               isSelected
-                ? "flex w-full flex-col gap-1 rounded-lg border border-foreground/30 bg-surface px-3 py-2 text-left text-sm text-foreground"
+                ? "flex w-full flex-col gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-left text-sm text-foreground"
                 : "flex w-full flex-col gap-1 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm text-foreground transition hover:border-foreground/20 hover:bg-surface/60 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             }
           >

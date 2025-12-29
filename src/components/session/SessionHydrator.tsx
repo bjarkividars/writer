@@ -7,15 +7,22 @@ import { useChatContext } from "@/components/chat/ChatContext";
 import { useEditorContext } from "@/components/editor/EditorContext";
 
 export function SessionHydrator() {
-  const { sessionId, sessionSource, setTitle } = useSessionContext();
+  const { sessionId, sessionSource, setTitle, setHydrated } = useSessionContext();
   const { replaceMessages } = useChatContext();
   const { editor } = useEditorContext();
   const hydratedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!sessionId || sessionSource !== "url" || hydratedRef.current === sessionId) {
+    // If no session from URL, mark as hydrated immediately
+    if (!sessionId || sessionSource !== "url") {
+      setHydrated(true);
       return;
     }
+
+    if (hydratedRef.current === sessionId) {
+      return;
+    }
+
     if (!editor) {
       return;
     }
@@ -41,17 +48,21 @@ export function SessionHydrator() {
             streaming: false,
           }))
         );
+        setTimeout(() => {
+          if (!cancelled) setHydrated(true);
+        }, 500);
       })
       .catch((error) => {
         if (!cancelled) {
           console.error("[session] Failed to load session", error);
+          setHydrated(true); // Mark as hydrated even on error
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [editor, replaceMessages, sessionId, sessionSource]);
+  }, [editor, replaceMessages, sessionId, sessionSource, setTitle, setHydrated]);
 
   return null;
 }

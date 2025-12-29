@@ -11,6 +11,7 @@
   --color-muted: hsl(45 9% 97%);
   --color-hover: hsl(45 8% 95%);
   --color-foreground: hsl(40 6% 20%);
+  --color-foreground-secondary: hsl(40 5% 35%);
   --color-foreground-muted: hsl(40 4% 56%);
   --color-border: hsl(40 6% 90%);
   --color-accent: hsl(40 6% 20%);
@@ -30,12 +31,23 @@
 
 /* Dark mode overrides for @theme colors */
 @layer base {
+  :root {
+    --doc-panel-width: 0px;
+    --doc-max-width: 8.5in;
+    --doc-inline-padding: 2.5rem;
+    --doc-content-left: max(
+      0px,
+      calc((var(--doc-panel-width) - var(--doc-max-width)) / 2)
+    );
+  }
+
   .dark {
     --color-background: hsl(0 0% 10%);
     --color-surface: hsl(0 0% 16%);
     --color-muted: hsl(0 0% 14%);
     --color-hover: hsl(0 0% 18%);
     --color-foreground: hsl(40 6% 90%);
+    --color-foreground-secondary: hsl(40 4% 55%);
     --color-foreground-muted: hsl(40 4% 55%);
     --color-border: hsl(0 0% 20%);
     --color-accent: hsl(40 6% 90%);
@@ -71,19 +83,23 @@
 @layer components {
   /* Button variants */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-muted text-foreground hover:bg-hover disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-muted text-foreground hover:bg-hover disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors text-foreground hover:bg-hover disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors text-foreground hover:bg-hover disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-danger text-white shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-danger text-white shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+  }
+
+  .btn-text {
+    @apply inline-flex items-center justify-center text-sm font-medium transition-colors text-foreground-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
 
   /* Button sizes */
@@ -100,7 +116,7 @@
   }
 
   .btn-icon {
-    @apply h-6 w-6 p-0;
+    @apply h-6 w-6 p-0 text-foreground-secondary hover:text-foreground;
   }
 }
 
@@ -121,17 +137,20 @@
 
 [data-separator] {
   flex: 0 0 4px !important;
-  background-color: color-mix(in srgb, var(--color-foreground-muted) 20%, transparent);
   cursor: col-resize;
-  transition: background-color 150ms ease;
   outline: none;
+  transition: background-color 150ms ease;
 }
 
 [data-separator]:hover,
 [data-separator='hover'],
 [data-separator]:active,
 [data-separator='active'] {
-  background-color: color-mix(in srgb, var(--color-foreground-muted) 40%, transparent);
+  background-color: color-mix(in srgb, var(--color-foreground-muted) 10%, transparent);
+}
+
+.chat-separator[data-chat-collapsed='true'] .chat-separator-button {
+  cursor: pointer !important;
 }
 
 /* -----------------------------
@@ -140,7 +159,7 @@
 
 .ProseMirror {
   min-height: 100%;
-  padding: 4rem 2.5rem 6rem;
+  padding: 2rem var(--doc-inline-padding) 6rem;
   outline: none;
 }
 

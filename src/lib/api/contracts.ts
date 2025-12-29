@@ -104,3 +104,21 @@ export type SelectMessageOptionRequest = z.infer<
 export type SelectMessageOptionResponse = z.infer<
   typeof SelectMessageOptionResponseSchema
 >;
+
+export const SessionSummarySchema = z
+  .object({
+    id: z.string(),
+    title: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+export const GetSessionsResponseSchema = z
+  .object({
+    sessions: z.array(SessionSummarySchema),
+  })
+  .strict();
+
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;
+export type GetSessionsResponse = z.infer<typeof GetSessionsResponseSchema>;
