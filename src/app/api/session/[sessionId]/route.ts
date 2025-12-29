@@ -29,6 +29,7 @@ export async function GET(_: Request, { params }: RouteParams) {
 
   const payload = GetSessionResponseSchema.parse({
     sessionId,
+    title: session.title ?? null,
     document: session.document?.content ?? null,
     messages: session.messages.map((message) => ({
       id: message.id,

@@ -7,12 +7,14 @@ const DEFAULT_DEBOUNCE_MS = 1000;
 export function useDocumentAutosave(
   editor: Editor | null,
   ensureSession: () => Promise<string>,
-  debounceMs: number = DEFAULT_DEBOUNCE_MS
+  debounceMs: number = DEFAULT_DEBOUNCE_MS,
+  onSaved?: (sessionId: string, content: JSONContent, text: string) => void
 ) {
   const pendingContentRef = useRef<JSONContent | null>(null);
   const lastSavedRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
+  const latestTextRef = useRef("");
 
   const flushSave = useCallback(async () => {
     if (isSavingRef.current || !pendingContentRef.current) {
@@ -31,6 +33,7 @@ export function useDocumentAutosave(
       const sessionId = await ensureSession();
       await saveDocument(sessionId, content);
       lastSavedRef.current = serialized;
+      onSaved?.(sessionId, content, latestTextRef.current);
     } catch (error) {
       console.error("[autosave] Failed to save document", error);
       pendingContentRef.current = content;
@@ -40,11 +43,12 @@ export function useDocumentAutosave(
         void flushSave();
       }
     }
-  }, [ensureSession]);
+  }, [ensureSession, onSaved]);
 
   const scheduleSave = useCallback(() => {
     if (!editor) return;
     pendingContentRef.current = editor.getJSON();
+    latestTextRef.current = editor.getText();
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }

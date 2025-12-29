@@ -3,6 +3,7 @@ import {
   AppendMessageRequestSchema,
   AppendMessageResponseSchema,
   CreateSessionResponseSchema,
+  GenerateSessionTitleResponseSchema,
   GetSessionResponseSchema,
   SaveDocumentRequestSchema,
   SaveDocumentResponseSchema,
@@ -80,5 +81,17 @@ export async function selectMessageOption(
       body: JSON.stringify(body),
     },
     SelectMessageOptionResponseSchema
+  );
+}
+
+export async function generateSessionTitle(sessionId: string) {
+  return fetchJson(
+    `/api/session/${sessionId}/title`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+    GenerateSessionTitleResponseSchema
   );
 }

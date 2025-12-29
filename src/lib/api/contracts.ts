@@ -43,6 +43,7 @@ export const CreateSessionResponseSchema = z
 export const GetSessionResponseSchema = z
   .object({
     sessionId: SessionIdSchema,
+    title: z.string().nullable(),
     document: DocumentContentSchema.nullable(),
     messages: z.array(ChatMessageSchema),
   })
@@ -71,6 +72,12 @@ export const AppendMessageRequestSchema = z
 
 export const AppendMessageResponseSchema = ChatMessageSchema;
 
+export const GenerateSessionTitleResponseSchema = z
+  .object({
+    title: z.string().nullable(),
+  })
+  .strict();
+
 export const SelectMessageOptionRequestSchema = z
   .object({
     index: z.number().int().min(0),
@@ -88,6 +95,9 @@ export type SaveDocumentRequest = z.infer<typeof SaveDocumentRequestSchema>;
 export type SaveDocumentResponse = z.infer<typeof SaveDocumentResponseSchema>;
 export type AppendMessageRequest = z.infer<typeof AppendMessageRequestSchema>;
 export type AppendMessageResponse = z.infer<typeof AppendMessageResponseSchema>;
+export type GenerateSessionTitleResponse = z.infer<
+  typeof GenerateSessionTitleResponseSchema
+>;
 export type SelectMessageOptionRequest = z.infer<
   typeof SelectMessageOptionRequestSchema
 >;

@@ -298,8 +298,10 @@ ${itemsText}
 18. If options has any items, edits MUST be an empty array (no edits are allowed when presenting options).
 19. If edits has any items, options MUST be an empty array (no options when applying edits).
 20. options must be user-facing and readable; never include block IDs, operations, or technical terms.
-21. If MODE=chat, message must be a 1-2 sentence summary of edits, or a clarification question if needed.
-22. If MODE=inline, only set message when you need clarification; otherwise set message to "".
-23. If you need clarification, set edits to [] and ask the question in message.
-24. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
+21. Do not restate the options in the message. When options are present, message should be a brief prompt like "Pick a direction to continue."
+22. Option "content" may be a concise description of the direction; it does not need to include full verbatim rewrites for long passages.
+23. If MODE=chat, message must be a 1-2 sentence summary of edits (when edits are present), or a clarification question if needed.
+24. If MODE=inline, only set message when you need clarification; otherwise set message to "".
+25. If you need clarification, set edits to [] and ask the question in message.
+26. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
 }

@@ -7,7 +7,7 @@ import { useChatContext } from "@/components/chat/ChatContext";
 import { useEditorContext } from "@/components/editor/EditorContext";
 
 export function SessionHydrator() {
-  const { sessionId, sessionSource } = useSessionContext();
+  const { sessionId, sessionSource, setTitle } = useSessionContext();
   const { replaceMessages } = useChatContext();
   const { editor } = useEditorContext();
   const hydratedRef = useRef<string | null>(null);
@@ -28,6 +28,7 @@ export function SessionHydrator() {
         if (cancelled) return;
         const content = data.document ?? "";
         editor.commands.setContent(content, { emitUpdate: false });
+        setTitle(data.title ?? null);
         replaceMessages(
           data.messages.map((message) => ({
             id: message.id,

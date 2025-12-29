@@ -73,6 +73,7 @@ type EditorContextValue = {
 };
 
 const EditorContext = createContext<EditorContextValue | null>(null);
+const TITLE_DOC_THRESHOLD = 300;
 
 export function useEditorContext() {
   const context = useContext(EditorContext);
@@ -113,9 +114,14 @@ export function EditorProvider({
   // AI editing hook
   const aiEdit = useAiEdit(editor);
   const chat = useChatContext();
-  const { ensureSession } = useSessionContext();
+  const { ensureSession, requestTitle, title } = useSessionContext();
 
-  useDocumentAutosave(editor, ensureSession);
+  useDocumentAutosave(editor, ensureSession, undefined, (_, __, text) => {
+    if (title || text.trim().length < TITLE_DOC_THRESHOLD) {
+      return;
+    }
+    void requestTitle();
+  });
 
   useEffect(() => {
     if (!editor) return;

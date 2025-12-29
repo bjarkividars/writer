@@ -7,6 +7,8 @@ import ChatOptions from "./ChatOptions";
 import { useSessionContext } from "@/components/session/SessionContext";
 import { appendMessage, selectMessageOption as persistOptionSelection } from "@/lib/api/client";
 
+const TITLE_MESSAGE_THRESHOLD = 2;
+
 export default function Chat() {
   const { submitAiInstruction, aiInteractionState, lastAiMode } =
     useEditorContext();
@@ -21,7 +23,7 @@ export default function Chat() {
     selectMessageOption,
     finishMessage,
   } = useChatContext();
-  const { ensureSession } = useSessionContext();
+  const { ensureSession, requestTitle, title } = useSessionContext();
   const isChatAi = lastAiMode === "chat";
 
   const renderModelContent = (message: {
@@ -60,10 +62,15 @@ export default function Chat() {
 
     const sessionPromise = ensureSession();
     const userMessageId = addUserMessage(trimmed);
+    const nextUserCount =
+      messages.filter((message) => message.role === "user").length + 1;
     void sessionPromise
       .then((sessionId) => appendMessage(sessionId, "user", trimmed))
       .then((saved) => {
         setMessagePersistedId(userMessageId, saved.id);
+        if (!title && nextUserCount >= TITLE_MESSAGE_THRESHOLD) {
+          void requestTitle();
+        }
       })
       .catch((error) => {
         console.error("[chat] Failed to persist user message", error);
