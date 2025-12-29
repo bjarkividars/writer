@@ -175,14 +175,33 @@ model Document {
 }
 
 model ChatMessage {
-  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sessionId String           @db.Uuid
-  role      String
-  content   String
-  createdAt DateTime         @default(now()) @db.Timestamptz(6)
-  session   WorkspaceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId        String              @db.Uuid
+  role             String
+  content          String
+  selectedOptionId String?             @unique @db.Uuid
+  createdAt        DateTime            @default(now()) @db.Timestamptz(6)
+  session          WorkspaceSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  options          ChatMessageOption[]
+  selectedOption   ChatMessageOption?  @relation("ChatMessageSelectedOption", fields: [selectedOptionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([sessionId, createdAt])
   @@map("chat_message")
+  @@schema("public")
+}
+
+model ChatMessageOption {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  messageId String       @db.Uuid
+  index     Int
+  title     String
+  content   String
+  createdAt DateTime     @default(now()) @db.Timestamptz(6)
+  message   ChatMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  selectedBy ChatMessage? @relation("ChatMessageSelectedOption")
+
+  @@unique([messageId, index])
+  @@index([messageId])
+  @@map("chat_message_option")
   @@schema("public")
 }

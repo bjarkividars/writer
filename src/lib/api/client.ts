@@ -6,6 +6,8 @@ import {
   GetSessionResponseSchema,
   SaveDocumentRequestSchema,
   SaveDocumentResponseSchema,
+  SelectMessageOptionRequestSchema,
+  SelectMessageOptionResponseSchema,
 } from "./contracts";
 
 async function fetchJson<T>(
@@ -49,9 +51,10 @@ export async function saveDocument(sessionId: string, content: unknown) {
 export async function appendMessage(
   sessionId: string,
   role: "user" | "model",
-  content: string
+  content: string,
+  options?: { index: number; title: string; content: string }[]
 ) {
-  const body = AppendMessageRequestSchema.parse({ role, content });
+  const body = AppendMessageRequestSchema.parse({ role, content, options });
   return fetchJson(
     `/api/session/${sessionId}/messages`,
     {
@@ -60,5 +63,22 @@ export async function appendMessage(
       body: JSON.stringify(body),
     },
     AppendMessageResponseSchema
+  );
+}
+
+export async function selectMessageOption(
+  sessionId: string,
+  messageId: string,
+  index: number
+) {
+  const body = SelectMessageOptionRequestSchema.parse({ index });
+  return fetchJson(
+    `/api/session/${sessionId}/messages/${messageId}/select-option`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    SelectMessageOptionResponseSchema
   );
 }

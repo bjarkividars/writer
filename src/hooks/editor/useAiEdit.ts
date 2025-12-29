@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import type { Editor } from "@tiptap/react";
 import { buildBlockMap } from "@/lib/ai/blockMap";
-import type { BlockItem, BlockType } from "@/lib/ai/schemas";
+import type { BlockItem, BlockType, AiEditOption } from "@/lib/ai/schemas";
 import { EditRequest } from "@/lib/ai/schemas";
 import type { EditState } from "@/hooks/editor/aiEdit/types";
 import { dispatchOperation } from "@/hooks/editor/aiEdit/dispatchOperation";
@@ -16,6 +16,8 @@ type AiEditRunOptions = {
   sessionId?: string;
   onMessageUpdate?: (message: string) => void;
   onMessageComplete?: (message: string) => void;
+  onOptionsUpdate?: (options: AiEditOption[]) => void;
+  onOptionsComplete?: (options: AiEditOption[]) => void;
 };
 
 /**
@@ -71,6 +73,33 @@ function getEditKey(index: number, edit: { target?: unknown; operation?: unknown
   return { key };
 }
 
+function normalizeOptions(options: unknown[]): AiEditOption[] {
+  return options
+    .map((option) => {
+      if (typeof option !== "object" || option === null) return null;
+      const { title, content } = option as {
+        title?: unknown;
+        content?: unknown;
+      };
+      if (typeof title !== "string" || typeof content !== "string") {
+        return null;
+      }
+      const trimmedTitle = title.trim();
+      const trimmedContent = content.trim();
+      if (!trimmedTitle || !trimmedContent) return null;
+      return { title: trimmedTitle, content: trimmedContent };
+    })
+    .filter((option): option is AiEditOption => option !== null);
+}
+
+function areOptionsEqual(a: AiEditOption[], b: AiEditOption[]) {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (option, index) =>
+      option.title === b[index]?.title && option.content === b[index]?.content
+  );
+}
+
 /**
  * Hook for AI-powered document editing with streaming
  *
@@ -81,6 +110,8 @@ export function useAiEdit(editor: Editor | null) {
   // Store block map from server
   const blockMapRef = useRef<BlockItem[]>([]);
   const messageRef = useRef<string>("");
+  const optionsRef = useRef<AiEditOption[]>([]);
+  const hasOptionsRef = useRef(false);
 
   // Simple state tracking per edit
   const editsState = useRef<Map<string, EditState>>(new Map());
@@ -139,6 +170,7 @@ export function useAiEdit(editor: Editor | null) {
   const processEdits = useCallback(
     (edits: unknown[]) => {
       if (!editor) return;
+      if (hasOptionsRef.current) return;
 
       let appliedAnyEdit = false;
       const insertAnchors = new Map<string, number>();
@@ -256,6 +288,8 @@ export function useAiEdit(editor: Editor | null) {
       setAiInteractionState("loading");
       editsState.current.clear();
       messageRef.current = "";
+      optionsRef.current = [];
+      hasOptionsRef.current = false;
 
       // Lock editor
       if (editor) {
@@ -325,6 +359,18 @@ export function useAiEdit(editor: Editor | null) {
                 options?.onMessageUpdate?.(nextMessage);
               }
             }
+            if (parsed?.options) {
+              const nextOptions = normalizeOptions(parsed.options);
+              if (
+                nextOptions.length > 0 &&
+                !hasStartedEditingRef.current &&
+                !areOptionsEqual(nextOptions, optionsRef.current)
+              ) {
+                optionsRef.current = nextOptions;
+                hasOptionsRef.current = true;
+                options?.onOptionsUpdate?.(nextOptions);
+              }
+            }
             if (
               !hasStartedStreamingRef.current &&
               (parsed?.edits || parsed?.message !== undefined)
@@ -349,6 +395,9 @@ export function useAiEdit(editor: Editor | null) {
         abortControllerRef.current = null;
         setAiInteractionState("complete");
         options?.onMessageComplete?.(messageRef.current);
+        if (optionsRef.current.length > 0) {
+          options?.onOptionsComplete?.(optionsRef.current);
+        }
       }
     },
     [editor, processEdits]

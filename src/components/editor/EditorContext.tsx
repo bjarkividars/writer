@@ -14,6 +14,7 @@ import type { Editor, JSONContent } from "@tiptap/react";
 import { useAiEdit } from "@/hooks/editor/useAiEdit";
 import { useDocumentAutosave } from "@/hooks/editor/useDocumentAutosave";
 import { useChatContext } from "@/components/chat/ChatContext";
+import type { AiEditOption } from "@/lib/ai/schemas";
 import { useSessionContext } from "@/components/session/SessionContext";
 
 type SelectionRange = { from: number; to: number } | null;
@@ -38,6 +39,8 @@ type AiInstructionOptions = {
   sessionId?: string;
   onMessageUpdate?: (message: string) => void;
   onMessageComplete?: (message: string) => void;
+  onOptionsUpdate?: (options: AiEditOption[]) => void;
+  onOptionsComplete?: (options: AiEditOption[]) => void;
 };
 
 type UndoState = {
@@ -340,6 +343,36 @@ export function EditorProvider({
           chat.finishMessage(inlineMessageId);
         });
 
+      const handleOptionsUpdate =
+        options?.onOptionsUpdate ??
+        ((nextOptions) => {
+          if (!inlineMessageId) {
+            inlineMessageId = chat.startModelMessage("");
+          }
+          chat.setMessageOptions(
+            inlineMessageId,
+            nextOptions.map((option, index) => ({
+              index,
+              title: option.title,
+              content: option.content,
+            }))
+          );
+        });
+
+      const handleOptionsComplete =
+        options?.onOptionsComplete ??
+        ((nextOptions) => {
+          if (!inlineMessageId) return;
+          chat.setMessageOptions(
+            inlineMessageId,
+            nextOptions.map((option, index) => ({
+              index,
+              title: option.title,
+              content: option.content,
+            }))
+          );
+        });
+
       const sessionPromise = options?.sessionId
         ? Promise.resolve(options.sessionId)
         : ensureSession();
@@ -352,6 +385,8 @@ export function EditorProvider({
             sessionId,
             onMessageUpdate: handleMessageUpdate,
             onMessageComplete: handleMessageComplete,
+            onOptionsUpdate: handleOptionsUpdate,
+            onOptionsComplete: handleOptionsComplete,
           });
         })
         .catch((err) => {

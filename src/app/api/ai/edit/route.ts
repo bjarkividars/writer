@@ -293,8 +293,13 @@ ${itemsText}
 13. Always include a "message" field in the output JSON.
 14. message must be plain text with no quotes or newlines.
 15. message must be human-readable and user-facing; do not mention block IDs, operations, internal rules, or technical terms.
-16. If MODE=chat, message must be a 1-2 sentence summary of edits, or a clarification question if needed.
-17. If MODE=inline, only set message when you need clarification; otherwise set message to "".
-18. If you need clarification, set edits to [] and ask the question in message.
-19. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
+16. Always include an "options" array; use [] when you have no alternatives.
+17. If you provide multiple options, include 2-4 items; each item must include "title" and "content" fields.
+18. If options has any items, edits MUST be an empty array (no edits are allowed when presenting options).
+19. If edits has any items, options MUST be an empty array (no options when applying edits).
+20. options must be user-facing and readable; never include block IDs, operations, or technical terms.
+21. If MODE=chat, message must be a 1-2 sentence summary of edits, or a clarification question if needed.
+22. If MODE=inline, only set message when you need clarification; otherwise set message to "".
+23. If you need clarification, set edits to [] and ask the question in message.
+24. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
 }

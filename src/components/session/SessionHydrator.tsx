@@ -31,8 +31,12 @@ export function SessionHydrator() {
         replaceMessages(
           data.messages.map((message) => ({
             id: message.id,
+            persistedId: message.id,
             role: message.role,
             content: message.content,
+            options: message.options,
+            selectedOptionId: message.selectedOptionId ?? null,
+            selectedOptionIndex: message.selectedOptionId ? 0 : undefined,
             streaming: false,
           }))
         );

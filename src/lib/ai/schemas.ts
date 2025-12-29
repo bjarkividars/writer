@@ -181,24 +181,44 @@ export const ResolvedEditOp = z
 
 export type ResolvedEditOp = z.infer<typeof ResolvedEditOp>;
 
+export const AiEditOption = z
+  .object({
+    title: z
+      .string()
+      .describe("Short, user-friendly label for the option."),
+    content: z
+      .string()
+      .describe(
+        "User-facing text for this option (rewrite or direction)."
+      ),
+  })
+  .strict();
+
+export type AiEditOption = z.infer<typeof AiEditOption>;
+
 /**
  * AI edit output - response from LLM (with block item IDs)
  */
 export const AiEditOutput = z
   .object({
-  edits: z
+    edits: z
     .array(AiEditOp)
     .describe(
       "Array of edit operations to apply. Keep minimal (1-3 edits). Can be empty array if no edits yet."
     ),
-  message: z
-    .string()
-    .describe(
-      "Brief summary or clarification question for the user. Use an empty string if not needed."
-    ),
-  complete: z
-    .boolean()
-    .describe("Set to true when all edits are finalized and ready to apply"),
+    message: z
+      .string()
+      .describe(
+        "Brief summary or clarification question for the user. Use an empty string if not needed."
+      ),
+    options: z
+      .array(AiEditOption)
+      .describe(
+        "Alternative suggestions for the user to choose from. Use an empty array when not needed."
+      ),
+    complete: z
+      .boolean()
+      .describe("Set to true when all edits are finalized and ready to apply"),
   })
   .strict();
 

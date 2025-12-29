@@ -19,7 +19,7 @@ export async function GET(_: Request, { params }: RouteParams) {
     where: { id: sessionId },
     include: {
       document: true,
-      messages: { orderBy: { createdAt: "asc" } },
+      messages: { orderBy: { createdAt: "asc" }, include: { options: true } },
     },
   });
 
@@ -35,6 +35,13 @@ export async function GET(_: Request, { params }: RouteParams) {
       role: message.role,
       content: message.content,
       createdAt: message.createdAt.toISOString(),
+      options: message.options.map((option) => ({
+        id: option.id,
+        index: option.index,
+        title: option.title,
+        content: option.content,
+      })),
+      selectedOptionId: message.selectedOptionId,
     })),
   });
 

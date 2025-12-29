@@ -1,4 +1,8 @@
-type ParsedEdits = { edits?: unknown[]; message?: string } | null;
+type ParsedEdits = {
+  edits?: unknown[];
+  message?: string;
+  options?: unknown[];
+} | null;
 
 function isArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
@@ -8,14 +12,16 @@ function tryParseCompleteJSON(text: string): ParsedEdits {
   try {
     const parsed = JSON.parse(text) as unknown;
     if (typeof parsed === "object" && parsed !== null && "edits" in parsed) {
-      const { edits: editsValue, message } = parsed as {
+      const { edits: editsValue, message, options } = parsed as {
         edits: unknown;
         message?: unknown;
+        options?: unknown;
       };
       if (isArray(editsValue)) {
         const textMessage =
           typeof message === "string" ? message : undefined;
-        return { edits: editsValue, message: textMessage };
+        const optionItems = isArray(options) ? options : undefined;
+        return { edits: editsValue, message: textMessage, options: optionItems };
       }
     }
   } catch {

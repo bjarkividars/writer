@@ -9,11 +9,22 @@ import {
   type ReactNode,
 } from "react";
 
+export type ChatOption = {
+  id?: string;
+  title: string;
+  content: string;
+  index: number;
+};
+
 export type ChatMessage = {
   id: string;
+  persistedId?: string;
   role: "user" | "model";
   content: string;
   streaming: boolean;
+  options?: ChatOption[];
+  selectedOptionIndex?: number;
+  selectedOptionId?: string | null;
 };
 
 type ChatContextValue = {
@@ -21,6 +32,10 @@ type ChatContextValue = {
   addUserMessage: (content: string) => string;
   startModelMessage: (initialContent?: string) => string;
   setMessageContent: (id: string, content: string) => void;
+  setMessageOptions: (id: string, options: ChatOption[]) => void;
+  setMessagePersistedId: (id: string, persistedId: string) => void;
+  setMessageSelectedOptionId: (id: string, selectedOptionId: string | null) => void;
+  selectMessageOption: (id: string, index: number) => void;
   finishMessage: (id: string) => void;
   replaceMessages: (messages: ChatMessage[]) => void;
 };
@@ -62,6 +77,50 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const setMessageOptions = useCallback((id: string, options: ChatOption[]) => {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === id ? { ...message, options } : message
+      )
+    );
+  }, []);
+
+  const setMessagePersistedId = useCallback((id: string, persistedId: string) => {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === id ? { ...message, persistedId } : message
+      )
+    );
+  }, []);
+
+  const setMessageSelectedOptionId = useCallback(
+    (id: string, selectedOptionId: string | null) => {
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === id ? { ...message, selectedOptionId } : message
+        )
+      );
+    },
+    []
+  );
+
+  const selectMessageOption = useCallback((id: string, index: number) => {
+    setMessages((prev) =>
+      prev.map((message) => {
+        if (message.id !== id) return message;
+        const options = message.options ?? [];
+        const selected =
+          options.find((option) => option.index === index) ?? options[index];
+        if (!selected) return message;
+        return {
+          ...message,
+          options: [selected],
+          selectedOptionIndex: 0,
+        };
+      })
+    );
+  }, []);
+
   const finishMessage = useCallback((id: string) => {
     setMessages((prev) =>
       prev.map((message) =>
@@ -80,6 +139,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       addUserMessage,
       startModelMessage,
       setMessageContent,
+      setMessageOptions,
+      setMessagePersistedId,
+      setMessageSelectedOptionId,
+      selectMessageOption,
       finishMessage,
       replaceMessages,
     }),
@@ -88,6 +151,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       addUserMessage,
       startModelMessage,
       setMessageContent,
+      setMessageOptions,
+      setMessagePersistedId,
+      setMessageSelectedOptionId,
+      selectMessageOption,
       finishMessage,
       replaceMessages,
     ]
