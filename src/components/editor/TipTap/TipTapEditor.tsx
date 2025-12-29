@@ -2,7 +2,7 @@
 
 import type { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
-import { useEffect, type RefObject } from "react";
+import { type RefObject } from "react";
 import BubbleToolbar from "@/components/editor/BubbleToolbar/BubbleToolbar";
 
 type TipTapEditorProps = {
@@ -10,15 +10,12 @@ type TipTapEditorProps = {
   editorRootRef: RefObject<HTMLDivElement | null>;
 };
 
-export default function TipTapEditor({ editor, editorRootRef }: TipTapEditorProps) {
-  useEffect(() => {
-    if (editor) {
-      editor.commands.focus("start");
-    }
-  }, [editor]);
-
+export default function TipTapEditor({
+  editor,
+  editorRootRef,
+}: TipTapEditorProps) {
   return (
-    <div ref={editorRootRef} className="h-full w-full">
+    <div ref={editorRootRef} className="min-h-full w-full flex-1">
       <EditorContent editor={editor} className="h-full w-full" />
       <BubbleToolbar />
     </div>

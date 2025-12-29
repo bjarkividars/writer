@@ -52,6 +52,8 @@ type EditorContextValue = {
   editorRootRef: RefObject<HTMLDivElement | null>;
   textFormat: TextFormatValue;
   activeMarks: string[];
+  isEditorEmpty: boolean;
+  isEditorFocused: boolean;
   // AI highlight (for visual selection when input is focused)
   enterAiMode: () => void;
   exitAiMode: () => void;
@@ -93,6 +95,8 @@ export function EditorProvider({
   const [activeMarks, setActiveMarks] = useState<string[]>([]);
   const [isAiMode, setIsAiMode] = useState(false);
   const [lastAiMode, setLastAiMode] = useState<AiEditMode>("inline");
+  const [isEditorEmpty, setIsEditorEmpty] = useState(true);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
 
   const [highlightedRange, setHighlightedRange] =
     useState<SelectionRange>(null);
@@ -109,6 +113,40 @@ export function EditorProvider({
   const { ensureSession } = useSessionContext();
 
   useDocumentAutosave(editor, ensureSession);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateEmptyState = () => {
+      setIsEditorEmpty(editor.isEmpty);
+    };
+
+    updateEmptyState();
+    editor.on("update", updateEmptyState);
+    editor.on("create", updateEmptyState);
+
+    return () => {
+      editor.off("update", updateEmptyState);
+      editor.off("create", updateEmptyState);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateFocusState = () => {
+      setIsEditorFocused(editor.isFocused);
+    };
+
+    updateFocusState();
+    editor.on("focus", updateFocusState);
+    editor.on("blur", updateFocusState);
+
+    return () => {
+      editor.off("focus", updateFocusState);
+      editor.off("blur", updateFocusState);
+    };
+  }, [editor]);
 
   // Update formatting states when selection changes
   useEffect(() => {
@@ -358,6 +396,8 @@ export function EditorProvider({
       editorRootRef,
       textFormat,
       activeMarks,
+      isEditorEmpty,
+      isEditorFocused,
       enterAiMode,
       exitAiMode,
       isAiMode,
@@ -376,6 +416,8 @@ export function EditorProvider({
       editorRootRef,
       textFormat,
       activeMarks,
+      isEditorEmpty,
+      isEditorFocused,
       enterAiMode,
       exitAiMode,
       isAiMode,

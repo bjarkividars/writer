@@ -10,6 +10,7 @@ import { EditorProvider } from "@/components/editor/EditorContext";
 import { ChatProvider } from "@/components/chat/ChatContext";
 import { SessionProvider } from "@/components/session/SessionContext";
 import { SessionHydrator } from "@/components/session/SessionHydrator";
+import EditorEmptyState from "@/components/editor/EditorEmptyState";
 
 type WorkspaceProps = {
   initialSessionId?: string | null;
@@ -34,8 +35,9 @@ export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
         <EditorProvider editor={editor} editorRootRef={editorRootRef}>
           <SessionHydrator />
           <Group orientation="horizontal" className="mx-0 flex h-full w-full">
-            <Panel>
-              <div className="h-full overflow-y-auto">
+            <Panel className="h-full">
+              <div className="relative h-full overflow-y-auto">
+                <EditorEmptyState />
                 <div className="mx-auto min-h-full w-full max-w-[8.5in]">
                   <TipTapEditor editor={editor} editorRootRef={editorRootRef} />
                 </div>
@@ -50,6 +52,7 @@ export default function Workspace({ initialSessionId = null }: WorkspaceProps) {
               maxSize="45%"
               collapsible
               collapsedSize="0%"
+              className="h-full"
             >
               <div className="h-full relative overflow-y-auto bg-surface">
                 <Chat />

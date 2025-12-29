@@ -2,6 +2,7 @@ import { useEditorContext } from "@/components/editor/EditorContext";
 import ChatInput from "./ChatInput";
 import { ModelMessage, UserMessage } from "./ChatMessage";
 import { useChatContext } from "./ChatContext";
+import ChatEmptyState from "./ChatEmptyState";
 import { useSessionContext } from "@/components/session/SessionContext";
 import { appendMessage } from "@/lib/api/client";
 
@@ -79,16 +80,28 @@ export default function Chat() {
     });
   };
 
+  const messagesEmpty = messages.length === 0;
+
   return (
     <div className="flex min-h-full flex-col gap-4 px-4">
-      <div className="flex flex-1 flex-col gap-3 pt-16">
-        {messages.map((message) =>
-          message.role === "model" ? (
-            <ModelMessage key={message.id}>
-              {renderModelContent(message)}
-            </ModelMessage>
-          ) : (
-            <UserMessage key={message.id}>{message.content}</UserMessage>
+      <div
+        className={
+          messagesEmpty
+            ? "flex flex-1 items-center justify-center pt-16"
+            : "flex flex-1 flex-col gap-3 pt-16"
+        }
+      >
+        {messagesEmpty ? (
+          <ChatEmptyState />
+        ) : (
+          messages.map((message) =>
+            message.role === "model" ? (
+              <ModelMessage key={message.id}>
+                {renderModelContent(message)}
+              </ModelMessage>
+            ) : (
+              <UserMessage key={message.id}>{message.content}</UserMessage>
+            )
           )
         )}
       </div>

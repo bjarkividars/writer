@@ -16,7 +16,7 @@ export function ModelMessage({ children }: ChatMessageProps) {
 
 export function UserMessage({ children }: ChatMessageProps) {
   return (
-    <div className="self-end max-w-[80%] rounded-lg bg-background px-3 py-2 text-sm text-foreground">
+    <div className="self-end max-w-[80%] rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground">
       {children}
     </div>
   );
