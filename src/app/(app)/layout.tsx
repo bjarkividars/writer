@@ -16,7 +16,7 @@ export default function AppLayout({
         <SidebarToggle />
         <div className="h-full flex">
           <Sidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col shadow-doc-left relative z-10">
             <Header />
             <main className="flex-1 overflow-hidden">{children}</main>
           </div>

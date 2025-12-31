@@ -67,7 +67,7 @@ export default function Workspace() {
       <EditorProvider editor={editor} editorRootRef={editorRootRef}>
         <SessionHydrator />
         <LoadingProvider>
-          <Group orientation="horizontal" className="mx-0 flex h-full w-full">
+          <Group orientation="horizontal" className="mx-0 flex h-full w-full ">
             <Panel className="h-full" onResize={handleDocumentPanelResize}>
               <ScrollAreaRoot
                 className="relative h-full min-h-full"

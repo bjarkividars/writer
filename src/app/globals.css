@@ -129,6 +129,26 @@
   .shadow-bubble {
     box-shadow: var(--shadow-lg);
   }
+
+  /* Shadow from document panel over sidebar (desktop only) */
+  .shadow-doc-left::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 20px;
+    margin-left: -20px;
+    pointer-events: none;
+    background: linear-gradient(to left, rgb(0 0 0 / 0.05), rgb(0 0 0 / 0) 60%, transparent);
+    z-index: 1;
+  }
+
+  @media (max-width: 1023px) {
+    .shadow-doc-left::before {
+      display: none;
+    }
+  }
 }
 
 /* -----------------------------
@@ -140,6 +160,8 @@
   cursor: col-resize;
   outline: none;
   transition: background-color 150ms ease;
+  border-radius: var(--radius-lg);
+  margin-bottom: 10px;
 }
 
 [data-separator]:hover,

@@ -43,19 +43,19 @@ export default function Sidebar() {
         className={`
           fixed lg:relative
           inset-y-0 left-0
-          bg-surface border-r border-border
+          bg-surface
           transition-all duration-200 ease-in-out
           z-50 lg:z-auto
           ${
             isOpen
               ? "w-[280px] translate-x-0"
-              : "w-0 -translate-x-full lg:translate-x-0 lg:border-0"
+              : "w-0 -translate-x-full lg:translate-x-0"
           }
         `}
         aria-label="Sessions sidebar"
       >
         <div className="h-full flex flex-col overflow-hidden">
-          <SidebarHeader />
+          <SidebarHeader isOpen={isOpen} />
           <SidebarContent sessions={sessions} loading={loading} />
         </div>
       </aside>

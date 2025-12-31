@@ -57,7 +57,7 @@ export default function RenameSessionDialog({
           <DialogTitle className="text-lg font-semibold text-foreground mb-2">
             Rename session
           </DialogTitle>
-          <DialogDescription className="text-sm text-foreground-muted mb-4">
+          <DialogDescription className="text-sm text-foreground-secondary mb-4">
             Enter a new name for this session.
           </DialogDescription>
           <input

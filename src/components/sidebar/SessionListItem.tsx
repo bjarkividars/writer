@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useSidebarContext } from "./SidebarContext";
 import { formatRelativeTime } from "@/lib/utils/time";
 import SessionItemMenu from "./SessionItemMenu";
@@ -15,8 +16,8 @@ type SessionListItemProps = {
 };
 
 export default function SessionListItem({ session }: SessionListItemProps) {
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
   const { close, refreshSessions } = useSidebarContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -25,9 +26,7 @@ export default function SessionListItem({ session }: SessionListItemProps) {
   const displayTitle = session.title || "Untitled";
   const relativeTime = formatRelativeTime(session.updatedAt);
 
-  const handleClick = () => {
-    router.push(`/${session.id}`);
-
+  const handleLinkClick = () => {
     // Close sidebar on mobile after navigation
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       close();
@@ -66,29 +65,25 @@ export default function SessionListItem({ session }: SessionListItemProps) {
   };
 
   return (
-    <div
-      className={`
-        w-[280px] group relative
-        transition-colors
-        border-l-2
-        ${
-          isActive
-            ? "border-accent bg-hover"
-            : "border-transparent hover:bg-hover/50"
-        }
-      `}
-    >
-      <button
-        onClick={handleClick}
-        className="w-full text-left px-4 py-2.5 pr-10"
+    <div className="group relative py-0.5">
+      <Link
+        href={`/${session.id}`}
+        onClick={handleLinkClick}
+        className={`
+          block w-full px-5 py-2.5 pr-10 
+          transition-all duration-200 ease-out
+          ${isActive ? "bg-hover" : "hover:bg-hover/60"}
+        `}
       >
-        <div className="text-sm font-medium text-foreground truncate">
+        <div
+          className={`text-sm truncate transition-colors ${isActive ? "font-semibold text-foreground" : "font-medium text-foreground"}`}
+        >
           {displayTitle}
         </div>
-        <div className="text-xs text-foreground-muted mt-0.5 truncate">
+        <div className="text-xs text-foreground-secondary mt-0.5 truncate">
           {relativeTime}
         </div>
-      </button>
+      </Link>
 
       <div className="absolute right-2 top-1/2 -translate-y-1/2">
         <SessionItemMenu onRename={handleRename} onDelete={handleDelete} />
