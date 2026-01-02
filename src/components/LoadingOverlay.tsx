@@ -2,16 +2,34 @@
 
 type LoadingOverlayProps = {
   show: boolean;
+  position?: "fixed" | "absolute";
+  className?: string;
 };
 
-export default function LoadingOverlay({ show }: LoadingOverlayProps) {
+export default function LoadingOverlay({
+  show,
+  position = "fixed",
+  className,
+}: LoadingOverlayProps) {
   if (!show) return null;
 
+  const positionClass = position === "absolute" ? "absolute" : "fixed";
+
   return (
-    <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+    <div
+      className={[
+        positionClass,
+        "inset-0 bg-background z-100 flex items-center justify-center",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="flex flex-col items-center gap-4">
         <img src="/pencil.gif" alt="" className="w-16 h-16" />
-        <p className="text-sm text-foreground-muted">Setting up your workspace</p>
+        <p className="text-sm text-foreground-muted">
+          Setting up your workspace
+        </p>
       </div>
     </div>
   );

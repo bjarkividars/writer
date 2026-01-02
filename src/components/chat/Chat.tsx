@@ -1,14 +1,21 @@
 import { useEditorContext } from "@/components/editor/EditorContext";
 import ChatInput from "./ChatInput";
-import { ModelMessage, UserMessage } from "./ChatMessage";
 import { useChatContext, type ChatOption } from "./ChatContext";
-import ChatEmptyState from "./ChatEmptyState";
-import ChatOptions from "./ChatOptions";
+import ChatMessages from "./ChatMessages";
 import { useSessionContext } from "@/components/session/SessionContext";
 import {
   useAppendMessageMutation,
   useSelectOptionMutation,
 } from "@/hooks/orpc/useMessageMutations";
+import { useCallback } from "react";
+import {
+  ScrollAreaRoot,
+  ScrollAreaViewport,
+  ScrollAreaContent,
+  ScrollAreaScrollbar,
+  ScrollAreaThumb,
+} from "@/components/ScrollArea";
+import { useChatScroll } from "./useChatScroll";
 
 const TITLE_MESSAGE_THRESHOLD = 2;
 
@@ -26,40 +33,11 @@ export default function Chat() {
     selectMessageOption,
     finishMessage,
   } = useChatContext();
-  const { ensureSession, requestTitle, title } = useSessionContext();
+  const { ensureSession, requestTitle, title, sessionId } = useSessionContext();
   const appendMessageMutation = useAppendMessageMutation();
   const selectOptionMutation = useSelectOptionMutation();
   const isChatAi = lastAiMode === "chat";
-
-  const renderModelContent = (message: {
-    content: string;
-    streaming: boolean;
-  }) => {
-    const trimmed = message.content.trim();
-    if (!message.streaming || trimmed.length > 0) {
-      return message.content;
-    }
-
-    if (aiInteractionState === "editing" && isChatAi) {
-      return (
-        <span className="text-xs text-muted-foreground">
-          Editing document...
-        </span>
-      );
-    }
-
-    if (aiInteractionState === "loading" && isChatAi) {
-      return (
-        <span className="flex items-center gap-1 text-muted-foreground translate-y-2">
-          <span className="inline-block h-1 w-1 rounded-full bg-current animate-bounce" />
-          <span className="inline-block h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:120ms]" />
-          <span className="inline-block h-1 w-1 rounded-full bg-current animate-bounce [animation-delay:240ms]" />
-        </span>
-      );
-    }
-
-    return null;
-  };
+  const { scrollRef, bottomRef } = useChatScroll({ messages, sessionId });
 
   const handleSubmit = (text: string) => {
     const trimmed = text.trim();
@@ -200,7 +178,10 @@ export default function Chat() {
             index: option.index,
           })
           .then((saved) => {
-            setMessageSelectedOptionId(messageId, saved.selectedOptionId ?? null);
+            setMessageSelectedOptionId(
+              messageId,
+              saved.selectedOptionId ?? null
+            );
             setMessageOptions(
               messageId,
               saved.options.map((item) => ({
@@ -291,72 +272,36 @@ export default function Chat() {
       });
   };
 
-  const messagesEmpty = messages.length === 0;
   const isBusy =
     aiInteractionState === "loading" ||
     aiInteractionState === "streaming" ||
     aiInteractionState === "editing";
 
   return (
-    <div className="flex min-h-full flex-col gap-4 px-4">
-      <div
-        className={
-          messagesEmpty
-            ? "flex flex-1 items-center justify-center pt-10"
-            : "flex flex-1 flex-col gap-5 pt-10"
-        }
+    <div className="flex h-full flex-col" key={sessionId}>
+      <ScrollAreaRoot
+        className="relative flex-1 min-h-0"
+        showBottomFade={false}
       >
-        {messagesEmpty ? (
-          <ChatEmptyState />
-        ) : (
-          messages.map((message, index) => {
-            if (message.role !== "model") {
-              return <UserMessage key={message.id}>{message.content}</UserMessage>;
-            }
-
-            const isLatest = index === messages.length - 1;
-            const hasOptions = (message.options?.length ?? 0) > 0;
-            const selectedIndex =
-              message.selectedOptionIndex ??
-              (message.selectedOptionId ? 0 : undefined);
-            const persistedId =
-              message.persistedId ?? (message.id.startsWith("msg-") ? undefined : message.id);
-            const canSelect =
-              isLatest &&
-              !isBusy &&
-              !message.streaming &&
-              selectedIndex === undefined &&
-              !!persistedId;
-
-            return (
-              <ModelMessage key={message.id}>
-                <div className="flex flex-col gap-3">
-                  {renderModelContent(message)}
-                  {hasOptions ? (
-                    <ChatOptions
-                      options={message.options ?? []}
-                      selectedIndex={selectedIndex}
-                      disabled={!canSelect}
-                      onSelect={(option, index) =>
-                        handleOptionSelect(
-                          message.id,
-                          persistedId,
-                          option,
-                          option.index ?? index
-                        )
-                      }
-                    />
-                  ) : null}
-                </div>
-              </ModelMessage>
-            );
-          })
-        )}
+        <ScrollAreaViewport ref={scrollRef} className="h-full min-h-full">
+          <ScrollAreaContent className="relative min-h-full">
+            <ChatMessages
+              messages={messages}
+              aiInteractionState={aiInteractionState}
+              isChatAi={isChatAi}
+              isBusy={isBusy}
+              onOptionSelect={handleOptionSelect}
+              bottomRef={bottomRef}
+            />
+          </ScrollAreaContent>
+        </ScrollAreaViewport>
+        <ScrollAreaScrollbar>
+          <ScrollAreaThumb />
+        </ScrollAreaScrollbar>
+      </ScrollAreaRoot>
+      <div className="px-4">
+        <ChatInput onSubmit={handleSubmit} disabled={isBusy} />
       </div>
-      <ChatInput
-        onSubmit={handleSubmit}
-        disabled={isBusy}
-      />
     </div>
   );
 }

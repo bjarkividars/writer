@@ -1,9 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { useSidebarContext } from "./sidebar/SidebarContext";
 import { useSessionContext } from "./session/SessionContext";
-import LoadingOverlay from "./LoadingOverlay";
 
 type LoadingContextValue = {
   isInitialLoading: boolean;
@@ -12,23 +10,20 @@ type LoadingContextValue = {
 const LoadingContext = createContext<LoadingContextValue | null>(null);
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
-  const { loading: sidebarLoading } = useSidebarContext();
-  const { isHydrated } = useSessionContext();
+  const { isHydrated, isSwitchingSession, sessionSource } = useSessionContext();
 
   // Initial loading is done when:
-  // 1. Sidebar has loaded
-  // 2. Session has been hydrated (or no session to hydrate)
-  const isInitialLoading = sidebarLoading || !isHydrated;
+  // 1. Session has been hydrated (or no session to hydrate)
+  const isSessionHydrating = sessionSource === "url" && !isHydrated;
+  const isInitialLoading =
+    isSessionHydrating || (sessionSource === "url" && isSwitchingSession);
 
   const value = {
     isInitialLoading,
   };
 
   return (
-    <LoadingContext.Provider value={value}>
-      <LoadingOverlay show={isInitialLoading} />
-      {children}
-    </LoadingContext.Provider>
+    <LoadingContext.Provider value={value}>{children}</LoadingContext.Provider>
   );
 }
 

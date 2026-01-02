@@ -15,6 +15,7 @@ export function useDocumentAutosave(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const latestTextRef = useRef("");
+  const ensureRequestedRef = useRef(false);
   const saveMutation = useSaveDocumentMutation();
 
   const flushSave = useCallback(async () => {
@@ -50,6 +51,13 @@ export function useDocumentAutosave(
 
   const scheduleSave = useCallback(() => {
     if (!editor) return;
+    if (!ensureRequestedRef.current) {
+      ensureRequestedRef.current = true;
+      ensureSession().catch((error) => {
+        console.error("[autosave] Failed to ensure session", error);
+        ensureRequestedRef.current = false;
+      });
+    }
     pendingContentRef.current = editor.getJSON();
     latestTextRef.current = editor.getText();
     if (timerRef.current) {
@@ -60,7 +68,11 @@ export function useDocumentAutosave(
         console.error("[autosave] Failed to save document", flushError);
       });
     }, debounceMs);
-  }, [editor, debounceMs, flushSave]);
+  }, [editor, debounceMs, flushSave, ensureSession]);
+
+  useEffect(() => {
+    ensureRequestedRef.current = false;
+  }, [ensureSession]);
 
   useEffect(() => {
     if (!editor) return;

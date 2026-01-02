@@ -16,7 +16,10 @@ type ChatInputProps = {
   disabled?: boolean;
 };
 
-export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps) {
+export default function ChatInput({
+  onSubmit,
+  disabled = false,
+}: ChatInputProps) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -45,7 +48,7 @@ export default function ChatInput({ onSubmit, disabled = false }: ChatInputProps
   };
 
   return (
-    <div className="sticky bottom-0 pb-4 bg-background before:content-[''] before:absolute before:-top-4 before:left-0 before:right-0 before:h-4 before:bg-linear-to-b before:from-transparent before:to-background">
+    <div className="relative pb-4 bg-background before:content-[''] before:absolute before:-top-4 before:left-0 before:right-0 before:h-4 before:bg-linear-to-b before:from-transparent before:to-background">
       <form onSubmit={handleSubmit}>
         <div className="bg-surface rounded-lg min-h-[32px] flex items-stretch border border-border">
           <ScrollAreaRoot className="w-full">
