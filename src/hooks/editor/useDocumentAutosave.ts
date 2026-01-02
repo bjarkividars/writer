@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { Editor, JSONContent } from "@tiptap/react";
-import { saveDocument } from "@/lib/api/client";
+import { useSaveDocumentMutation } from "@/hooks/orpc/useSessionMutations";
 
 const DEFAULT_DEBOUNCE_MS = 1000;
 
@@ -15,6 +15,7 @@ export function useDocumentAutosave(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
   const latestTextRef = useRef("");
+  const saveMutation = useSaveDocumentMutation();
 
   const flushSave = useCallback(async () => {
     if (isSavingRef.current || !pendingContentRef.current) {
@@ -31,7 +32,7 @@ export function useDocumentAutosave(
     isSavingRef.current = true;
     try {
       const sessionId = await ensureSession();
-      await saveDocument(sessionId, content);
+      await saveMutation.mutateAsync({ sessionId, content });
       lastSavedRef.current = serialized;
       onSaved?.(sessionId, content, latestTextRef.current);
     } catch (error) {
@@ -40,10 +41,12 @@ export function useDocumentAutosave(
     } finally {
       isSavingRef.current = false;
       if (pendingContentRef.current) {
-        void flushSave();
+        flushSave().catch((flushError) => {
+          console.error("[autosave] Failed to flush queued save", flushError);
+        });
       }
     }
-  }, [ensureSession, onSaved]);
+  }, [ensureSession, onSaved, saveMutation]);
 
   const scheduleSave = useCallback(() => {
     if (!editor) return;
@@ -53,7 +56,9 @@ export function useDocumentAutosave(
       clearTimeout(timerRef.current);
     }
     timerRef.current = setTimeout(() => {
-      void flushSave();
+      flushSave().catch((flushError) => {
+        console.error("[autosave] Failed to save document", flushError);
+      });
     }, debounceMs);
   }, [editor, debounceMs, flushSave]);
 

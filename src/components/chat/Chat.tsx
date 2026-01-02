@@ -5,7 +5,10 @@ import { useChatContext, type ChatOption } from "./ChatContext";
 import ChatEmptyState from "./ChatEmptyState";
 import ChatOptions from "./ChatOptions";
 import { useSessionContext } from "@/components/session/SessionContext";
-import { appendMessage, selectMessageOption as persistOptionSelection } from "@/lib/api/client";
+import {
+  useAppendMessageMutation,
+  useSelectOptionMutation,
+} from "@/hooks/orpc/useMessageMutations";
 
 const TITLE_MESSAGE_THRESHOLD = 2;
 
@@ -24,6 +27,8 @@ export default function Chat() {
     finishMessage,
   } = useChatContext();
   const { ensureSession, requestTitle, title } = useSessionContext();
+  const appendMessageMutation = useAppendMessageMutation();
+  const selectOptionMutation = useSelectOptionMutation();
   const isChatAi = lastAiMode === "chat";
 
   const renderModelContent = (message: {
@@ -64,91 +69,101 @@ export default function Chat() {
     const userMessageId = addUserMessage(trimmed);
     const nextUserCount =
       messages.filter((message) => message.role === "user").length + 1;
-    void sessionPromise
-      .then((sessionId) => appendMessage(sessionId, "user", trimmed))
-      .then((saved) => {
-        setMessagePersistedId(userMessageId, saved.id);
-        if (!title && nextUserCount >= TITLE_MESSAGE_THRESHOLD) {
-          void requestTitle();
-        }
-      })
-      .catch((error) => {
-        console.error("[chat] Failed to persist user message", error);
+    const persistUserMessage = async () => {
+      const sessionId = await sessionPromise;
+      const saved = await appendMessageMutation.mutateAsync({
+        sessionId,
+        role: "user",
+        content: trimmed,
       });
+      setMessagePersistedId(userMessageId, saved.id);
+      if (!title && nextUserCount >= TITLE_MESSAGE_THRESHOLD) {
+        await requestTitle();
+      }
+    };
+
+    persistUserMessage().catch((error) => {
+      console.error("[chat] Failed to persist user message", error);
+    });
     const modelMessageId = startModelMessage("");
     let latestOptions: ChatOption[] = [];
 
-    void sessionPromise.then((sessionId) => {
-      submitAiInstruction(trimmed, {
-        mode: "chat",
-        sessionId,
-        onMessageUpdate: (message) => {
-          setMessageContent(modelMessageId, message);
-        },
-        onMessageComplete: (message) => {
-          const trimmedMessage = message.trim();
-          const finalMessage =
-            trimmedMessage.length > 0
-              ? trimmedMessage
-              : latestOptions.length > 0
-                ? "Choose one option to continue."
-                : "Edits applied.";
-          setMessageContent(modelMessageId, finalMessage);
-          finishMessage(modelMessageId);
-          void sessionPromise.then((sessionId) =>
-            appendMessage(
-              sessionId,
-              "model",
-              finalMessage,
-              latestOptions.length > 0
-                ? latestOptions.map(({ index, title, content }) => ({
-                    index,
-                    title,
-                    content,
-                  }))
-                : undefined
-            )
-              .then((saved) => {
-                setMessagePersistedId(modelMessageId, saved.id);
-                setMessageSelectedOptionId(
-                  modelMessageId,
-                  saved.selectedOptionId ?? null
-                );
-                setMessageOptions(
-                  modelMessageId,
-                  saved.options.map((option) => ({
-                    id: option.id,
-                    index: option.index,
-                    title: option.title,
-                    content: option.content,
-                  }))
-                );
-              })
-              .catch((error) => {
-                console.error("[chat] Failed to persist model message", error);
-              })
-          );
-        },
-        onOptionsUpdate: (options) => {
-          const mapped = options.map((option, index) => ({
-            index,
-            title: option.title,
-            content: option.content,
-          }));
-          latestOptions = mapped;
-          setMessageOptions(modelMessageId, mapped);
-        },
-        onOptionsComplete: (options) => {
-          const mapped = options.map((option, index) => ({
-            index,
-            title: option.title,
-            content: option.content,
-          }));
-          latestOptions = mapped;
-          setMessageOptions(modelMessageId, mapped);
-        },
+    sessionPromise
+      .then((sessionId) => {
+        submitAiInstruction(trimmed, {
+          mode: "chat",
+          sessionId,
+          onMessageUpdate: (message) => {
+            setMessageContent(modelMessageId, message);
+          },
+          onMessageComplete: (message) => {
+            const trimmedMessage = message.trim();
+            const finalMessage =
+              trimmedMessage.length > 0
+                ? trimmedMessage
+                : latestOptions.length > 0
+                  ? "Choose one option to continue."
+                  : "Edits applied.";
+            setMessageContent(modelMessageId, finalMessage);
+            finishMessage(modelMessageId);
+
+            const persistModelMessage = async () => {
+              const saved = await appendMessageMutation.mutateAsync({
+                sessionId,
+                role: "model",
+                content: finalMessage,
+                options:
+                  latestOptions.length > 0
+                    ? latestOptions.map(({ index, title, content }) => ({
+                        index,
+                        title,
+                        content,
+                      }))
+                    : undefined,
+              });
+              setMessagePersistedId(modelMessageId, saved.id);
+              setMessageSelectedOptionId(
+                modelMessageId,
+                saved.selectedOptionId ?? null
+              );
+              setMessageOptions(
+                modelMessageId,
+                saved.options.map((option) => ({
+                  id: option.id,
+                  index: option.index,
+                  title: option.title,
+                  content: option.content,
+                }))
+              );
+            };
+
+            persistModelMessage().catch((error) => {
+              console.error("[chat] Failed to persist model message", error);
+            });
+          },
+          onOptionsUpdate: (options) => {
+            const mapped = options.map((option, index) => ({
+              index,
+              title: option.title,
+              content: option.content,
+            }));
+            latestOptions = mapped;
+            setMessageOptions(modelMessageId, mapped);
+          },
+          onOptionsComplete: (options) => {
+            const mapped = options.map((option, index) => ({
+              index,
+              title: option.title,
+              content: option.content,
+            }));
+            latestOptions = mapped;
+            setMessageOptions(modelMessageId, mapped);
+          },
+        });
+      })
+      .catch((error) => {
+        console.error("[chat] Failed to start chat AI request", error);
       });
-    });
   };
 
   const handleOptionSelect = (
@@ -176,93 +191,104 @@ export default function Chat() {
     const modelMessageId = startModelMessage("");
     let latestOptions: ChatOption[] = [];
 
-    void sessionPromise.then((sessionId) => {
-      void persistOptionSelection(sessionId, persistedId, option.index)
-        .then((saved) => {
-          setMessageSelectedOptionId(messageId, saved.selectedOptionId ?? null);
-          setMessageOptions(
-            messageId,
-            saved.options.map((item) => ({
-              id: item.id,
-              index: item.index,
+    sessionPromise
+      .then((sessionId) => {
+        selectOptionMutation
+          .mutateAsync({
+            sessionId,
+            messageId: persistedId,
+            index: option.index,
+          })
+          .then((saved) => {
+            setMessageSelectedOptionId(messageId, saved.selectedOptionId ?? null);
+            setMessageOptions(
+              messageId,
+              saved.options.map((item) => ({
+                id: item.id,
+                index: item.index,
+                title: item.title,
+                content: item.content,
+              }))
+            );
+          })
+          .catch((error) => {
+            console.error("[chat] Failed to persist option selection", error);
+          });
+
+        submitAiInstruction(instruction, {
+          mode: "chat",
+          sessionId,
+          onMessageUpdate: (message) => {
+            setMessageContent(modelMessageId, message);
+          },
+          onMessageComplete: (message) => {
+            const trimmedMessage = message.trim();
+            const finalMessage =
+              trimmedMessage.length > 0
+                ? trimmedMessage
+                : latestOptions.length > 0
+                  ? "Choose one option to continue."
+                  : "Edits applied.";
+            setMessageContent(modelMessageId, finalMessage);
+            finishMessage(modelMessageId);
+
+            const persistModelMessage = async () => {
+              const saved = await appendMessageMutation.mutateAsync({
+                sessionId,
+                role: "model",
+                content: finalMessage,
+                options:
+                  latestOptions.length > 0
+                    ? latestOptions.map(({ index, title, content }) => ({
+                        index,
+                        title,
+                        content,
+                      }))
+                    : undefined,
+              });
+              setMessagePersistedId(modelMessageId, saved.id);
+              setMessageSelectedOptionId(
+                modelMessageId,
+                saved.selectedOptionId ?? null
+              );
+              setMessageOptions(
+                modelMessageId,
+                saved.options.map((item) => ({
+                  id: item.id,
+                  index: item.index,
+                  title: item.title,
+                  content: item.content,
+                }))
+              );
+            };
+
+            persistModelMessage().catch((error) => {
+              console.error("[chat] Failed to persist model message", error);
+            });
+          },
+          onOptionsUpdate: (options) => {
+            const mapped = options.map((item, optionIndex) => ({
+              index: optionIndex,
               title: item.title,
               content: item.content,
-            }))
-          );
-        })
-        .catch((error) => {
-          console.error("[chat] Failed to persist option selection", error);
+            }));
+            latestOptions = mapped;
+            setMessageOptions(modelMessageId, mapped);
+          },
+          onOptionsComplete: (options) => {
+            const mapped = options.map((item, optionIndex) => ({
+              index: optionIndex,
+              title: item.title,
+              content: item.content,
+            }));
+            latestOptions = mapped;
+            setMessageOptions(modelMessageId, mapped);
+          },
         });
-      submitAiInstruction(instruction, {
-        mode: "chat",
-        sessionId,
-        onMessageUpdate: (message) => {
-          setMessageContent(modelMessageId, message);
-        },
-        onMessageComplete: (message) => {
-          const trimmedMessage = message.trim();
-          const finalMessage =
-            trimmedMessage.length > 0
-              ? trimmedMessage
-              : latestOptions.length > 0
-                ? "Choose one option to continue."
-                : "Edits applied.";
-          setMessageContent(modelMessageId, finalMessage);
-          finishMessage(modelMessageId);
-          void sessionPromise.then((sessionId) =>
-            appendMessage(
-              sessionId,
-              "model",
-              finalMessage,
-              latestOptions.length > 0
-                ? latestOptions.map(({ index, title, content }) => ({
-                    index,
-                    title,
-                    content,
-                  }))
-                : undefined
-            )
-              .then((saved) => {
-                setMessagePersistedId(modelMessageId, saved.id);
-                setMessageSelectedOptionId(
-                  modelMessageId,
-                  saved.selectedOptionId ?? null
-                );
-                setMessageOptions(
-                  modelMessageId,
-                  saved.options.map((item) => ({
-                    id: item.id,
-                    index: item.index,
-                    title: item.title,
-                    content: item.content,
-                  }))
-                );
-              })
-              .catch((error) => {
-                console.error("[chat] Failed to persist model message", error);
-              })
-          );
-        },
-        onOptionsUpdate: (options) => {
-          const mapped = options.map((item, optionIndex) => ({
-            index: optionIndex,
-            title: item.title,
-            content: item.content,
-          }));
-          latestOptions = mapped;
-          setMessageOptions(modelMessageId, mapped);
-        },
-        onOptionsComplete: (options) => {
-          const mapped = options.map((item, optionIndex) => ({
-            index: optionIndex,
-            title: item.title,
-            content: item.content,
-          }));
-          latestOptions = mapped;
-          setMessageOptions(modelMessageId, mapped);
-        },
+      })
+      .catch((error) => {
+        console.error("[chat] Failed to handle option selection", error);
       });
-    });
   };
 
   const messagesEmpty = messages.length === 0;

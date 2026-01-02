@@ -120,7 +120,9 @@ export function EditorProvider({
     if (title || text.trim().length < TITLE_DOC_THRESHOLD) {
       return;
     }
-    void requestTitle();
+    requestTitle().catch((error) => {
+      console.error("[EditorContext] Failed to request title", error);
+    });
   });
 
   useEffect(() => {
@@ -385,7 +387,7 @@ export function EditorProvider({
         ? Promise.resolve(options.sessionId)
         : ensureSession();
 
-      void sessionPromise
+      sessionPromise
         .then((sessionId) => {
           // Start the edit (useAiEdit will handle state transitions)
           aiEdit.run(instruction, {

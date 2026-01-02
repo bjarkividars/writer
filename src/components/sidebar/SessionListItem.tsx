@@ -8,8 +8,11 @@ import { formatRelativeTime } from "@/lib/utils/time";
 import SessionItemMenu from "./SessionItemMenu";
 import DeleteSessionDialog from "./DeleteSessionDialog";
 import RenameSessionDialog from "./RenameSessionDialog";
-import { deleteSession, renameSession } from "@/lib/api/client";
-import type { SessionSummary } from "@/lib/api/contracts";
+import {
+  useDeleteSessionMutation,
+  useUpdateSessionMutation,
+} from "@/hooks/orpc/useSessionMutations";
+import type { SessionSummary } from "@/lib/orpc/types";
 
 type SessionListItemProps = {
   session: SessionSummary;
@@ -18,9 +21,11 @@ type SessionListItemProps = {
 export default function SessionListItem({ session }: SessionListItemProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { close, refreshSessions } = useSidebarContext();
+  const { close } = useSidebarContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const renameMutation = useUpdateSessionMutation();
+  const deleteMutation = useDeleteSessionMutation();
 
   const isActive = pathname === `/${session.id}`;
   const displayTitle = session.title || "Untitled";
@@ -39,8 +44,7 @@ export default function SessionListItem({ session }: SessionListItemProps) {
 
   const handleRenameConfirm = async (newTitle: string) => {
     try {
-      await renameSession(session.id, newTitle);
-      await refreshSessions();
+      await renameMutation.mutateAsync({ sessionId: session.id, title: newTitle });
     } catch (error) {
       console.error("Failed to rename session:", error);
     }
@@ -52,8 +56,7 @@ export default function SessionListItem({ session }: SessionListItemProps) {
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteSession(session.id);
-      await refreshSessions();
+      await deleteMutation.mutateAsync({ sessionId: session.id });
 
       // If deleting the current session, redirect to home
       if (isActive) {

@@ -6,7 +6,7 @@ import {
   ScrollAreaThumb,
 } from "@/components/ScrollArea";
 import SessionListItem from "./SessionListItem";
-import type { SessionSummary } from "@/lib/api/contracts";
+import type { SessionSummary } from "@/lib/orpc/types";
 
 type SidebarContentProps = {
   sessions: SessionSummary[];

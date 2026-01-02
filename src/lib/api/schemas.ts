@@ -49,24 +49,10 @@ export const GetSessionResponseSchema = z
   })
   .strict();
 
-export const SaveDocumentRequestSchema = z
-  .object({
-    content: DocumentContentSchema,
-  })
-  .strict();
-
 export const SaveDocumentResponseSchema = z
   .object({
     sessionId: SessionIdSchema,
     updatedAt: z.string(),
-  })
-  .strict();
-
-export const AppendMessageRequestSchema = z
-  .object({
-    role: z.enum(["user", "model"]),
-    content: z.string().min(1),
-    options: z.array(ChatOptionInputSchema).optional(),
   })
   .strict();
 
@@ -78,32 +64,37 @@ export const GenerateSessionTitleResponseSchema = z
   })
   .strict();
 
-export const SelectMessageOptionRequestSchema = z
+export const SelectMessageOptionResponseSchema = ChatMessageSchema;
+
+export const UpdateSessionResponseSchema = z
   .object({
-    index: z.number().int().min(0),
+    sessionId: SessionIdSchema,
+    title: z.string().nullable(),
+    updatedAt: z.string(),
   })
   .strict();
 
-export const SelectMessageOptionResponseSchema = ChatMessageSchema;
+export const DeleteSessionResponseSchema = z
+  .object({
+    success: z.boolean(),
+  })
+  .strict();
 
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 export type ChatOption = z.infer<typeof ChatOptionSchema>;
 export type ChatOptionInput = z.infer<typeof ChatOptionInputSchema>;
 export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>;
 export type GetSessionResponse = z.infer<typeof GetSessionResponseSchema>;
-export type SaveDocumentRequest = z.infer<typeof SaveDocumentRequestSchema>;
 export type SaveDocumentResponse = z.infer<typeof SaveDocumentResponseSchema>;
-export type AppendMessageRequest = z.infer<typeof AppendMessageRequestSchema>;
 export type AppendMessageResponse = z.infer<typeof AppendMessageResponseSchema>;
 export type GenerateSessionTitleResponse = z.infer<
   typeof GenerateSessionTitleResponseSchema
 >;
-export type SelectMessageOptionRequest = z.infer<
-  typeof SelectMessageOptionRequestSchema
->;
 export type SelectMessageOptionResponse = z.infer<
   typeof SelectMessageOptionResponseSchema
 >;
+export type UpdateSessionResponse = z.infer<typeof UpdateSessionResponseSchema>;
+export type DeleteSessionResponse = z.infer<typeof DeleteSessionResponseSchema>;
 
 export const SessionSummarySchema = z
   .object({

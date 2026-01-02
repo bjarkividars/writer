@@ -11,8 +11,11 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
-import { createSession, generateSessionTitle } from "@/lib/api/client";
 import { useSidebarContext } from "@/components/sidebar/SidebarContext";
+import {
+  useCreateSessionMutation,
+  useGenerateTitleMutation,
+} from "@/hooks/orpc/useSessionMutations";
 
 type SessionSource = "url" | "created" | null;
 
@@ -43,6 +46,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const createPromiseRef = useRef<Promise<string> | null>(null);
   const titlePromiseRef = useRef<Promise<string | null> | null>(null);
   const { refreshSessions } = useSidebarContext();
+  const createSessionMutation = useCreateSessionMutation();
+  const generateTitleMutation = useGenerateTitleMutation();
 
   // Extract sessionId from pathname
   useEffect(() => {
@@ -86,21 +91,21 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return createPromiseRef.current;
     }
 
-    const promise = createSession()
-      .then((response) => {
+    const promise = (async () => {
+      try {
+        const response = await createSessionMutation.mutateAsync(undefined);
         setSessionId(response.sessionId, "created");
         updateUrl(response.sessionId);
-        // Refresh sidebar to show new session
-        refreshSessions();
+        await refreshSessions();
         return response.sessionId;
-      })
-      .finally(() => {
+      } finally {
         createPromiseRef.current = null;
-      });
+      }
+    })();
 
     createPromiseRef.current = promise;
     return promise;
-  }, [sessionId, setSessionId, updateUrl, refreshSessions]);
+  }, [sessionId, setSessionId, updateUrl, refreshSessions, createSessionMutation]);
 
   const requestTitle = useCallback(async () => {
     if (title) {
@@ -111,23 +116,29 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return titlePromiseRef.current;
     }
 
-    const promise = ensureSession()
-      .then((sessionId) => generateSessionTitle(sessionId))
-      .then((response) => {
+    const promise = (async () => {
+      try {
+        const sessionId = await ensureSession();
+        const response = await generateTitleMutation.mutateAsync({ sessionId });
         if (response.title) {
           setTitle(response.title);
-          // Refresh sidebar to show updated title
-          refreshSessions();
+          await refreshSessions();
         }
         return response.title ?? null;
-      })
-      .finally(() => {
+      } finally {
         titlePromiseRef.current = null;
-      });
+      }
+    })();
 
     titlePromiseRef.current = promise;
     return promise;
-  }, [ensureSession, title, setTitle, refreshSessions]);
+  }, [
+    ensureSession,
+    title,
+    setTitle,
+    refreshSessions,
+    generateTitleMutation,
+  ]);
 
   const value = useMemo(
     () => ({

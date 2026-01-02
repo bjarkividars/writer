@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSessionContext } from "@/components/session/SessionContext";
-import { renameSession } from "@/lib/api/client";
+import { useUpdateSessionMutation } from "@/hooks/orpc/useSessionMutations";
 import { Download } from "lucide-react";
 import { Tooltip } from "@base-ui/react";
 
@@ -11,6 +11,7 @@ export default function Header() {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const renameMutation = useUpdateSessionMutation();
 
   const displayTitle = title || "Untitled";
 
@@ -35,7 +36,10 @@ export default function Header() {
 
     if (trimmed !== title) {
       try {
-        await renameSession(sessionId, trimmed);
+        await renameMutation.mutateAsync({
+          sessionId,
+          title: trimmed,
+        });
         setTitle(trimmed);
       } catch (error) {
         console.error("Failed to rename session", error);

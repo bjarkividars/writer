@@ -8,8 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getSessions } from "@/lib/api/client";
-import type { SessionSummary } from "@/lib/api/contracts";
+import type { SessionSummary } from "@/lib/orpc/types";
+import { useRefreshSessions, useSessionsQuery } from "@/hooks/orpc/useSessions";
 
 type SidebarContextValue = {
   isOpen: boolean;
@@ -29,25 +29,16 @@ const STORAGE_KEY = "writer_sidebar_open";
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const sessionsQuery = useSessionsQuery();
+  const refreshSessions = useRefreshSessions();
+  const sessions: SessionSummary[] = sessionsQuery.data?.sessions ?? [];
+  const loading = sessionsQuery.isLoading;
 
-  const fetchSessions = useCallback(async () => {
-    try {
-      const data = await getSessions();
-      setSessions(data.sessions);
-    } catch (error) {
-      console.error("[sidebar] Failed to load sessions", error);
-      setSessions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Fetch sessions on mount
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    if (sessionsQuery.error) {
+      console.error("[sidebar] Failed to load sessions", sessionsQuery.error);
+    }
+  }, [sessionsQuery.error]);
 
   const hasSessions = sessions.length > 0;
 
@@ -57,13 +48,19 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     const isMobile = window.matchMedia("(max-width: 1023px)").matches;
 
     if (stored !== null) {
-      setIsOpen(stored === "true");
+      setTimeout(() => {
+        setIsOpen(stored === "true");
+      }, 0);
     } else {
       // Default: open on desktop, closed on mobile
-      setIsOpen(!isMobile);
+      setTimeout(() => {
+        setIsOpen(!isMobile);
+      }, 0);
     }
 
-    setMounted(true);
+    setTimeout(() => {
+      setMounted(true);
+    }, 0);
   }, []);
 
   // Persist to localStorage
@@ -76,7 +73,9 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   // Close sidebar if no sessions
   useEffect(() => {
     if (!loading && !hasSessions) {
-      setIsOpen(false);
+      setTimeout(() => {
+        setIsOpen(false);
+      }, 0);
     }
   }, [loading, hasSessions]);
 
@@ -96,10 +95,6 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   }, [hasSessions]);
 
   const close = useCallback(() => setIsOpen(false), []);
-
-  const refreshSessions = useCallback(async () => {
-    await fetchSessions();
-  }, [fetchSessions]);
 
   const value = {
     isOpen,
