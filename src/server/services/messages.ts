@@ -60,12 +60,12 @@ export async function appendMessage(input: {
       content: input.content,
       options: input.options?.length
         ? {
-            create: input.options.map((option) => ({
-              index: option.index,
-              title: option.title,
-              content: option.content,
-            })),
-          }
+          create: input.options.map((option) => ({
+            index: option.index,
+            title: option.title,
+            content: option.content,
+          })),
+        }
         : undefined,
     },
     include: { options: true },
@@ -73,7 +73,7 @@ export async function appendMessage(input: {
 
   return mapMessage({
     id: message.id,
-    role: message.role,
+    role: message.role as 'model' | 'user',
     content: message.content,
     createdAt: message.createdAt,
     selectedOptionId: message.selectedOptionId,
@@ -154,7 +154,7 @@ export async function selectMessageOption(input: {
 
   return mapMessage({
     id: updatedMessage.id,
-    role: updatedMessage.role,
+    role: message.role as 'model' | 'user',
     content: updatedMessage.content,
     createdAt: updatedMessage.createdAt,
     selectedOptionId: updatedMessage.selectedOptionId,

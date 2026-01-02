@@ -280,28 +280,30 @@ ${itemsText}
 **RULES:**
 1. Always include an "operation" object with a "type".
 2. Paragraphs/headings: Use inline markdown (**bold**, *italic*, ~~strike~~, \`code\`).
-3. Headings: Do NOT include # markers in item text; use "headingLevel" on operations instead.
+3. Headings: Never include markdown heading markers (#, ##, ###) in any text; use "headingLevel" on operations instead.
 4. List items: Inline markdown only (no bullets, already in list).
 5. insert-item: "items" are sentences for paragraphs/headings, list items for lists.
 6. insert-block: set "blockType" and "headingLevel" (use null when not heading).
 7. transform-block: replace the entire block with the provided items + blockType.
 8. Paragraph/heading items must be single sentences with no line breaks.
-9. If multiple paragraphs are needed, use multiple insert-block operations (one per paragraph).
-10. Item IDs refer to existing items only; never invent new IDs.
-11. When inserting multiple blocks after/before the same itemId, keep them ordered in the edits array.
-12. Always target items using "block-item" with an itemId.
-13. Always include a "message" field in the output JSON.
-14. message must be plain text with no quotes or newlines.
-15. message must be human-readable and user-facing; do not mention block IDs, operations, internal rules, or technical terms.
-16. Always include an "options" array; use [] when you have no alternatives.
-17. If you provide multiple options, include 2-4 items; each item must include "title" and "content" fields.
-18. If options has any items, edits MUST be an empty array (no edits are allowed when presenting options).
-19. If edits has any items, options MUST be an empty array (no options when applying edits).
-20. options must be user-facing and readable; never include block IDs, operations, or technical terms.
-21. Do not restate the options in the message. When options are present, message should be a brief prompt like "Pick a direction to continue."
-22. Option "content" may be a concise description of the direction; it does not need to include full verbatim rewrites for long passages.
-23. If MODE=chat, message must be a 1-2 sentence summary of edits (when edits are present), or a clarification question if needed.
-24. If MODE=inline, only set message when you need clarification; otherwise set message to "".
-25. If you need clarification, set edits to [] and ask the question in message.
-26. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
+9. For multi-sentence paragraphs, include multiple items in the same block (one sentence per item).
+10. Paragraph breaks must be separate blocks; never include blank lines or multiple paragraphs in one item.
+11. If multiple paragraphs are needed, use multiple insert-block operations (one per paragraph).
+12. Item IDs refer to existing items only; never invent new IDs.
+13. When inserting multiple blocks after/before the same itemId, keep them ordered in the edits array.
+14. Always target items using "block-item" with an itemId.
+15. Always include a "message" field in the output JSON.
+16. message must be plain text with no quotes or newlines.
+17. message must be human-readable and user-facing; do not mention block IDs, operations, internal rules, or technical terms.
+18. Always include an "options" array; use [] when you have no alternatives.
+19. If you provide multiple options, include 2-4 items; each item must include "title" and "content" fields.
+20. If options has any items, edits MUST be an empty array (no edits are allowed when presenting options).
+21. If edits has any items, options MUST be an empty array (no options when applying edits).
+22. options must be user-facing and readable; never include block IDs, operations, or technical terms.
+23. Do not restate the options in the message. When options are present, message should be a brief prompt like "Pick a direction to continue."
+24. Option "content" may be a concise description of the direction; it does not need to include full verbatim rewrites for long passages.
+25. If MODE=chat, message must be a 1-2 sentence summary of edits (when edits are present), or a clarification question if needed.
+26. If MODE=inline, only set message when you need clarification; otherwise set message to "".
+27. If you need clarification, set edits to [] and ask the question in message.
+28. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
 }
