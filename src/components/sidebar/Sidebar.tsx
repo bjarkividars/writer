@@ -55,7 +55,7 @@ export default function Sidebar() {
         aria-label="Sessions sidebar"
       >
         <div className="h-full flex flex-col overflow-hidden">
-          <SidebarHeader isOpen={isOpen} />
+          <SidebarHeader />
           <SidebarContent sessions={sessions} loading={loading} />
         </div>
       </aside>

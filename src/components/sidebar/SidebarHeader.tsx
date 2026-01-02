@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
-export default function SidebarHeader({ isOpen }: { isOpen: boolean }) {
+export default function SidebarHeader() {
   const router = useRouter();
 
   const handleNewSession = () => {
@@ -11,17 +11,18 @@ export default function SidebarHeader({ isOpen }: { isOpen: boolean }) {
   };
 
   return (
-    <div className="flex items-center justify-start px-4 py-3 mt-1 shrink-0">
+    <div className="flex items-center gap-1.5 px-3 py-3 mt-[3px] shrink-0 w-[280px]">
       <button
         onClick={handleNewSession}
-        className="btn-secondary w-[200px] flex items-center justify-start gap-2 px-2 py-2 rounded-md"
+        className="flex-1 flex items-center justify-center gap-1.5 px-2.5 h-7 rounded bg-background text-foreground text-sm font-medium border border-border hover:bg-hover transition-colors cursor-pointer"
         aria-label="New session"
       >
-        <Plus
-          className={`w-4 h-4 ${isOpen ? "opacity-100" : "opacity-0"} transition-opacity duration-200 ease-in-out`}
-        />
-        New Document
+        <Plus className="w-3.5 h-3.5" />
+        <span>New Document</span>
       </button>
+
+      {/* Space reserved for toggle button */}
+      <div className="w-7 h-7" />
     </div>
   );
 }
