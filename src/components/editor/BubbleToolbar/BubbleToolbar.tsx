@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import AssistantInput from "@/components/editor/BubbleToolbar/AssistantInput";
@@ -30,9 +30,11 @@ export default function BubbleToolbar() {
     undoLastEdit,
     aiInteractionState,
     completedPrompt,
+    bubbleDismissKey,
   } = useEditorContext();
 
   const [inputValue, setInputValue] = useState("");
+  const suppressExitRef = useRef(false);
 
   const { open, anchorRef, popoverRef, close } = useSelectionBubbleAnchor({
     editor,
@@ -44,10 +46,20 @@ export default function BubbleToolbar() {
 
   // Ensure AI mode is always exited when bubble closes
   useEffect(() => {
+    if (!open && suppressExitRef.current) {
+      suppressExitRef.current = false;
+      return;
+    }
     if (!open && isAiMode) {
       exitAiMode();
     }
   }, [open, isAiMode, exitAiMode]);
+
+  useEffect(() => {
+    if (bubbleDismissKey === 0) return;
+    suppressExitRef.current = true;
+    close();
+  }, [bubbleDismissKey, close]);
 
   // Clear input when entering complete state
   useEffect(() => {
@@ -79,11 +91,15 @@ export default function BubbleToolbar() {
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
+      if (suppressExitRef.current) {
+        suppressExitRef.current = false;
+        close();
+        return;
+      }
       exitAiMode();
       close();
     }
   };
-  
 
   if (!editor) return null;
 

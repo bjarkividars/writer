@@ -76,5 +76,5 @@ export function useChatScroll({ messages, sessionId }: UseChatScrollOptions) {
     };
   }, [scrollToBottom]);
 
-  return { scrollRef, bottomRef };
+  return { scrollRef, bottomRef, scrollToBottom };
 }

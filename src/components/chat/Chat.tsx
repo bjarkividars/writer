@@ -7,7 +7,7 @@ import {
   useAppendMessageMutation,
   useSelectOptionMutation,
 } from "@/hooks/orpc/useMessageMutations";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   ScrollAreaRoot,
   ScrollAreaViewport,
@@ -16,6 +16,7 @@ import {
   ScrollAreaThumb,
 } from "@/components/ScrollArea";
 import { useChatScroll } from "./useChatScroll";
+import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 
 const TITLE_MESSAGE_THRESHOLD = 2;
 
@@ -34,10 +35,21 @@ export default function Chat() {
     finishMessage,
   } = useChatContext();
   const { ensureSession, requestTitle, title, sessionId } = useSessionContext();
+  const { registerScrollToBottom } = useChatPanelContext();
   const appendMessageMutation = useAppendMessageMutation();
   const selectOptionMutation = useSelectOptionMutation();
   const isChatAi = lastAiMode === "chat";
-  const { scrollRef, bottomRef } = useChatScroll({ messages, sessionId });
+  const { scrollRef, bottomRef, scrollToBottom } = useChatScroll({
+    messages,
+    sessionId,
+  });
+
+  useEffect(() => {
+    registerScrollToBottom(scrollToBottom);
+    return () => {
+      registerScrollToBottom(null);
+    };
+  }, [registerScrollToBottom, scrollToBottom]);
 
   const handleSubmit = (text: string) => {
     const trimmed = text.trim();

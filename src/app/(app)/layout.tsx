@@ -10,6 +10,7 @@ import { SessionProvider } from "@/components/session/SessionContext";
 import { LoadingProvider, useLoadingContext } from "@/components/LoadingProvider";
 import { EditorProvider } from "@/components/editor/EditorContext";
 import { ChatProvider } from "@/components/chat/ChatContext";
+import { ChatPanelProvider } from "@/components/chat/ChatPanelContext";
 import { editorExtensions } from "@/editor/extensions";
 
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -28,19 +29,21 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ChatProvider>
-      <EditorProvider editor={editor} editorRootRef={editorRootRef}>
-        <div className="h-screen w-full bg-background">
-          <SidebarToggle />
-          <FloatingThemeMenu />
-          <div className="h-full flex">
-            <Sidebar />
-            <div className="flex-1 flex flex-col shadow-doc-left relative z-10">
-              {!isInitialLoading && <Header />}
-              <main className="flex-1 overflow-hidden">{children}</main>
+      <ChatPanelProvider>
+        <EditorProvider editor={editor} editorRootRef={editorRootRef}>
+          <div className="h-dvh w-full bg-background">
+            <SidebarToggle />
+            <FloatingThemeMenu />
+            <div className="h-full flex">
+              <Sidebar />
+              <div className="flex-1 flex flex-col shadow-doc-left relative z-10">
+                {!isInitialLoading && <Header />}
+                <main className="flex-1 overflow-hidden">{children}</main>
+              </div>
             </div>
           </div>
-        </div>
-      </EditorProvider>
+        </EditorProvider>
+      </ChatPanelProvider>
     </ChatProvider>
   );
 }

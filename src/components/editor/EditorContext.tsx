@@ -14,6 +14,7 @@ import type { Editor, JSONContent } from "@tiptap/react";
 import { useAiEdit } from "@/hooks/editor/useAiEdit";
 import { useDocumentAutosave } from "@/hooks/editor/useDocumentAutosave";
 import { useChatContext } from "@/components/chat/ChatContext";
+import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 import type { AiEditOption } from "@/lib/ai/schemas";
 import { useSessionContext } from "@/components/session/SessionContext";
 
@@ -57,6 +58,7 @@ type EditorContextValue = {
   activeMarks: string[];
   isEditorEmpty: boolean;
   isEditorFocused: boolean;
+  bubbleDismissKey: number;
   // AI highlight (for visual selection when input is focused)
   enterAiMode: () => void;
   exitAiMode: () => void;
@@ -101,6 +103,7 @@ export function EditorProvider({
   const [lastAiMode, setLastAiMode] = useState<AiEditMode>("inline");
   const [isEditorEmpty, setIsEditorEmpty] = useState(true);
   const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [bubbleDismissKey, setBubbleDismissKey] = useState(0);
 
   const [highlightedRange, setHighlightedRange] =
     useState<SelectionRange>(null);
@@ -114,6 +117,7 @@ export function EditorProvider({
   // AI editing hook
   const aiEdit = useAiEdit(editor);
   const chat = useChatContext();
+  const { openChatPanel, scrollToBottom } = useChatPanelContext();
   const { ensureSession, requestTitle, title } = useSessionContext();
 
   useDocumentAutosave(editor, ensureSession, undefined, (_, __, text) => {
@@ -299,6 +303,24 @@ export function EditorProvider({
     setSelectedText("");
   }, [editor, highlightedRange, aiEdit]);
 
+  const dismissBubbleSelection = useCallback(() => {
+    if (!editor) return;
+    setIsAiMode(false);
+
+    const { to } = editor.state.selection;
+    editor
+      .chain()
+      .selectAll()
+      .unsetMark("aiHighlight")
+      .setTextSelection({ from: to, to })
+      .focus()
+      .run();
+
+    setHighlightedRange(null);
+    setSelectedText("");
+    setBubbleDismissKey((value) => value + 1);
+  }, [editor]);
+
   // Submit AI instruction: store undo state and start edit
   const submitAiInstruction = useCallback(
     (instruction: string, options?: AiInstructionOptions) => {
@@ -335,12 +357,23 @@ export function EditorProvider({
       }
 
       let inlineMessageId: string | null = null;
+      let revealedChatResponse = false;
+      const revealChatResponse = () => {
+        if (options?.mode === "chat" || revealedChatResponse) {
+          return;
+        }
+        revealedChatResponse = true;
+        openChatPanel();
+        dismissBubbleSelection();
+        scrollToBottom();
+      };
       const handleMessageUpdate =
         options?.onMessageUpdate ??
         ((message: string) => {
           if (!message.trim()) return;
           if (!inlineMessageId) {
             inlineMessageId = chat.startModelMessage("");
+            revealChatResponse();
           }
           chat.setMessageContent(inlineMessageId, message);
         });
@@ -358,6 +391,7 @@ export function EditorProvider({
         ((nextOptions) => {
           if (!inlineMessageId) {
             inlineMessageId = chat.startModelMessage("");
+            revealChatResponse();
           }
           chat.setMessageOptions(
             inlineMessageId,
@@ -403,7 +437,17 @@ export function EditorProvider({
           console.error("[EditorContext] Failed to ensure session:", err);
         });
     },
-    [editor, aiEdit, highlightedRange, selectedText, chat, ensureSession]
+    [
+      editor,
+      aiEdit,
+      highlightedRange,
+      selectedText,
+      chat,
+      ensureSession,
+      openChatPanel,
+      dismissBubbleSelection,
+      scrollToBottom,
+    ]
   );
 
   // Undo last edit: restore original text
@@ -443,6 +487,7 @@ export function EditorProvider({
       activeMarks,
       isEditorEmpty,
       isEditorFocused,
+      bubbleDismissKey,
       enterAiMode,
       exitAiMode,
       isAiMode,
@@ -463,6 +508,7 @@ export function EditorProvider({
       activeMarks,
       isEditorEmpty,
       isEditorFocused,
+      bubbleDismissKey,
       enterAiMode,
       exitAiMode,
       isAiMode,

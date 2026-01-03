@@ -26,7 +26,7 @@ export default function LoadingOverlay({
         .join(" ")}
     >
       <div className="flex flex-col items-center gap-4">
-        <img src="/pencil.gif" alt="" className="w-16 h-16" />
+        <img src="/pencil.gif" alt="" className="w-16 h-16 dark:invert dark:brightness-82 dark:contrast-125" />
         <p className="text-sm text-foreground-muted">
           Setting up your workspace
         </p>

@@ -74,6 +74,10 @@
   .root {
     isolation: isolate;
   }
+
+  button {
+    @apply cursor-pointer;
+  }
 }
 
 /* -----------------------------

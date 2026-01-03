@@ -1,7 +1,7 @@
 "use client";
 
 import TipTapEditor from "@/components/editor/TipTap/TipTapEditor";
-import { Panel, Group, Separator, usePanelRef } from "react-resizable-panels";
+import { Panel, Group, Separator } from "react-resizable-panels";
 import {
   ScrollAreaRoot,
   ScrollAreaViewport,
@@ -10,17 +10,22 @@ import {
   ScrollAreaThumb,
 } from "@/components/ScrollArea";
 import Chat from "./chat/Chat";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { SessionHydrator } from "@/components/session/SessionHydrator";
 import EditorEmptyState from "@/components/editor/EditorEmptyState";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { useLoadingContext } from "@/components/LoadingProvider";
 import { ChevronsLeft, Equal } from "lucide-react";
+import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 
 export default function Workspace() {
-  const chatPanelRef = usePanelRef();
-  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const {
+    panelRef: chatPanelRef,
+    isChatCollapsed,
+    setChatCollapsed,
+    openChatPanel,
+  } = useChatPanelContext();
   const { isInitialLoading } = useLoadingContext();
   const { editor, editorRootRef } = useEditorContext();
   const handleDocumentPanelResize = useCallback(
@@ -36,14 +41,14 @@ export default function Workspace() {
   const handleChatPanelResize = useCallback(
     ({ inPixels }: { inPixels: number }) => {
       if (!Number.isFinite(inPixels)) return;
-      setIsChatCollapsed(inPixels <= 1);
+      setChatCollapsed(inPixels <= 1);
     },
-    []
+    [setChatCollapsed]
   );
   const handleSeparatorClick = useCallback(() => {
     if (!isChatCollapsed) return;
-    chatPanelRef.current?.expand();
-  }, [isChatCollapsed, chatPanelRef]);
+    openChatPanel();
+  }, [isChatCollapsed, openChatPanel]);
 
   useEffect(() => {
     return () => {

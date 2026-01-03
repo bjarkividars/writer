@@ -27,7 +27,7 @@ const SidebarContext = createContext<SidebarContextValue | null>(null);
 const STORAGE_KEY = "writer_sidebar_open";
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const sessionsQuery = useSessionsQuery();
   const refreshSessions = useRefreshSessions();
@@ -42,19 +42,17 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const hasSessions = sessions.length > 0;
 
-  // Initialize from localStorage and check screen size
+  // Initialize from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    const isMobile = window.matchMedia("(max-width: 1023px)").matches;
 
     if (stored !== null) {
       setTimeout(() => {
         setIsOpen(stored === "true");
       }, 0);
     } else {
-      // Default: open on desktop, closed on mobile
       setTimeout(() => {
-        setIsOpen(!isMobile);
+        setIsOpen(false);
       }, 0);
     }
 

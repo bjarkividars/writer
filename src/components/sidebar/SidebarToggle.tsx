@@ -4,10 +4,10 @@ import { PanelLeft, PanelLeftClose } from "lucide-react";
 import { useSidebarContext } from "./SidebarContext";
 
 export default function SidebarToggle() {
-  const { isOpen, open, close, hasSessions, loading } = useSidebarContext();
+  const { isOpen, open, close, hasSessions } = useSidebarContext();
 
   // Don't show toggle if no sessions
-  if (!loading && !hasSessions) {
+  if (!hasSessions) {
     return null;
   }
 
