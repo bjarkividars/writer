@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useSidebarContext } from "./SidebarContext";
 import SidebarHeader from "./SidebarHeader";
 import SidebarContent from "./SidebarContent";
+import SidebarThemeToggle from "./SidebarThemeToggle";
 
 export default function Sidebar() {
   const { isOpen, close, sessions, loading, hasSessions } = useSidebarContext();
@@ -57,6 +58,7 @@ export default function Sidebar() {
         <div className="h-full flex flex-col overflow-hidden">
           <SidebarHeader />
           <SidebarContent sessions={sessions} loading={loading} />
+          <SidebarThemeToggle />
         </div>
       </aside>
     </>
