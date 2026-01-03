@@ -1,5 +1,8 @@
 import Workspace from "@/components/Workspace";
+import { headers } from "next/headers";
+import { isMobileUserAgent } from "@/lib/device";
 
-export default function Home() {
-  return <Workspace />;
+export default async function Home() {
+  const userAgent = (await headers()).get("user-agent");
+  return <Workspace initialIsMobile={isMobileUserAgent(userAgent)} />;
 }

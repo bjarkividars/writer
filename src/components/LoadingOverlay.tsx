@@ -1,5 +1,7 @@
 "use client";
 
+import { useThemePreference } from "./sidebar/useThemePreference";
+
 type LoadingOverlayProps = {
   show: boolean;
   position?: "fixed" | "absolute";
@@ -11,6 +13,8 @@ export default function LoadingOverlay({
   position = "fixed",
   className,
 }: LoadingOverlayProps) {
+  const { theme } = useThemePreference();
+  const isDark = theme === "dark";
   if (!show) return null;
 
   const positionClass = position === "absolute" ? "absolute" : "fixed";
@@ -26,7 +30,11 @@ export default function LoadingOverlay({
         .join(" ")}
     >
       <div className="flex flex-col items-center gap-4">
-        <img src="/pencil.gif" alt="" className="w-16 h-16 dark:invert dark:brightness-82 dark:contrast-125" />
+        <img
+          src="/pencil.gif"
+          alt=""
+          className={`w-16 h-16 ${isDark ? "dark:invert dark:brightness-82 dark:contrast-125" : ""}`}
+        />
         <p className="text-sm text-foreground-muted">
           Setting up your workspace
         </p>

@@ -35,10 +35,8 @@
     --doc-panel-width: 0px;
     --doc-max-width: 8.5in;
     --doc-inline-padding: 2.5rem;
-    --doc-content-left: max(
-      0px,
-      calc((var(--doc-panel-width) - var(--doc-max-width)) / 2)
-    );
+    --doc-content-left: max(0px,
+        calc((var(--doc-panel-width) - var(--doc-max-width)) / 2));
   }
 
   .dark {
@@ -85,13 +83,14 @@
    ----------------------------- */
 
 @layer components {
+
   /* Button variants */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground shadow-sm hover:opacity-90 data-pressed:opacity-90 disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-muted text-foreground hover:bg-hover disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-muted text-foreground hover:bg-hover data-pressed:bg-hover disabled:pointer-events-none disabled:opacity-50 cursor-pointer;
   }
 
   .btn-ghost {
@@ -129,6 +128,7 @@
    ----------------------------- */
 
 @layer utilities {
+
   /* Shadow utility for bubble toolbar */
   .shadow-bubble {
     box-shadow: var(--shadow-lg);
@@ -253,6 +253,7 @@
   0% {
     background-position: -100% 0, 0 0;
   }
+
   100% {
     background-position: 200% 0, 0 0;
   }
@@ -263,10 +264,13 @@
    ----------------------------- */
 
 @keyframes bounce-up {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
   }
+
   50% {
     transform: translateY(-55%);
     animation-timing-function: cubic-bezier(0, 0, 0.2, 1);

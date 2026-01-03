@@ -29,7 +29,7 @@ export default function FloatingThemeMenu() {
   }
 
   return (
-    <div className="fixed bottom-4 left-2 z-40">
+    <div className="fixed bottom-4 left-2 z-40 hidden md:block">
       <Menu.Root>
         <Menu.Trigger
           render={(props) => (
