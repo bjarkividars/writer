@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useEditor } from "@tiptap/react";
 import Sidebar from "@/components/sidebar/Sidebar";
 import SidebarToggle from "@/components/sidebar/SidebarToggle";
+import FloatingThemeMenu from "@/components/sidebar/FloatingThemeMenu";
 import Header from "@/components/header/Header";
 import { SessionProvider } from "@/components/session/SessionContext";
 import { LoadingProvider, useLoadingContext } from "@/components/LoadingProvider";
@@ -30,6 +31,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <EditorProvider editor={editor} editorRootRef={editorRootRef}>
         <div className="h-screen w-full bg-background">
           <SidebarToggle />
+          <FloatingThemeMenu />
           <div className="h-full flex">
             <Sidebar />
             <div className="flex-1 flex flex-col shadow-doc-left relative z-10">
