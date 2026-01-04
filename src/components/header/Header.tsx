@@ -6,7 +6,7 @@ import { useSessionContext } from "@/components/session/SessionContext";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { useUpdateSessionMutation } from "@/hooks/orpc/useSessionMutations";
 import { Download, ChevronDown, FileDown, Clipboard } from "lucide-react";
-import { Menu } from "@base-ui/react";
+import { Menu } from "@/components/Menu";
 import { tiptapToMarkdown } from "@/lib/editor/markdown";
 import { Button } from "@/components/Button";
 
@@ -159,7 +159,7 @@ export default function Header() {
         />
         <Menu.Portal>
           <Menu.Positioner side="bottom" align="end" sideOffset={6}>
-            <Menu.Popup className="min-w-44 rounded-md border border-border bg-background p-1 shadow-sm">
+            <Menu.Popup className="min-w-44">
               <Menu.Item
                 onClick={handleDownloadPdf}
                 className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-foreground outline-none hover:bg-hover data-highlighted:bg-hover cursor-pointer data-disabled:cursor-default data-disabled:opacity-50"

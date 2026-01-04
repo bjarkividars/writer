@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import type { Editor } from "@tiptap/react";
-import { Menu } from "@base-ui/react";
+import { Menu } from "@/components/Menu";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { Button } from "@/components/Button";
 
@@ -96,7 +96,7 @@ export default function TextFormat({ editor }: TextFormatProps) {
 
       <Menu.Portal>
         <Menu.Positioner side="bottom" align="start" sideOffset={6}>
-          <Menu.Popup className="min-w-44 rounded-md border border-border bg-background p-1 shadow-sm">
+          <Menu.Popup className="min-w-44">
             <Menu.RadioGroup value={textFormat} onValueChange={applyFormat}>
               {formatOptions.map((option, index) => {
                 const showSeparator =

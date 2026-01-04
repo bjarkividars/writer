@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { Popover } from "@base-ui/react";
 import { Button } from "@/components/Button";
+import { Menu } from "@/components/Menu";
 
 type SessionItemMenuProps = {
   onRename: () => void;
@@ -14,51 +13,45 @@ export default function SessionItemMenu({
   onRename,
   onDelete,
 }: SessionItemMenuProps) {
-  const [open, setOpen] = useState(false);
-
-  const handleRename = () => {
-    setOpen(false);
-    onRename();
-  };
-
-  const handleDelete = () => {
-    setOpen(false);
-    onDelete();
-  };
-
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger
-        className="btn-ghost btn-icon opacity-0 group-hover:opacity-100 transition-opacity data-pressed:opacity-100"
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <MoreVertical className="w-4 h-4" />
-      </Popover.Trigger>
+    <Menu.Root>
+      <Menu.Trigger
+        render={(props) => (
+          <Button
+            {...props}
+            className="btn-ghost btn-icon opacity-0 group-hover:opacity-100 transition-opacity data-pressed:opacity-100"
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onClick?.(event);
+            }}
+          >
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+        )}
+      />
 
-      <Popover.Portal>
-        <Popover.Positioner side="bottom" align="end" sideOffset={4}>
-          <Popover.Popup className="rounded-md border border-border bg-background shadow-lg min-w-[160px] z-50">
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="end" sideOffset={4}>
+          <Menu.Popup className="min-w-[160px]">
             <div className="flex flex-col">
-              <Button
-                onClick={handleRename}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-hover transition-colors text-left w-full cursor-pointer"
+              <Menu.Item
+                onClick={onRename}
+                className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm text-foreground outline-none hover:bg-hover data-highlighted:bg-hover cursor-pointer"
               >
                 <Pencil className="w-4 h-4" />
                 Rename
-              </Button>
-              <Button
-                onClick={handleDelete}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-hover transition-colors text-left w-full cursor-pointer"
+              </Menu.Item>
+              <Menu.Item
+                onClick={onDelete}
+                className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm text-danger outline-none hover:bg-hover data-highlighted:bg-hover cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
-              </Button>
+              </Menu.Item>
             </div>
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }

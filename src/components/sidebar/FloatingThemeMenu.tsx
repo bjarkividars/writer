@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu } from "@base-ui/react";
+import { Menu } from "@/components/Menu";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useSidebarContext } from "./SidebarContext";
 import { useThemePreference, type ThemePreference } from "./useThemePreference";
@@ -46,7 +46,7 @@ export default function FloatingThemeMenu() {
         />
         <Menu.Portal>
           <Menu.Positioner side="top" align="start" sideOffset={8}>
-            <Menu.Popup className="min-w-40 rounded-md border border-border bg-background p-1 shadow-sm">
+            <Menu.Popup className="min-w-40">
               <Menu.RadioGroup
                 value={theme}
                 onValueChange={(value) => setTheme(value as ThemePreference)}
