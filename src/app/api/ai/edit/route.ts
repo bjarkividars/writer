@@ -228,10 +228,10 @@ function buildPrompt(params: {
                 item.blockType === "heading"
                     ? `heading-${item.headingLevel ?? 1}`
                     : item.blockType === "bulletList"
-                    ? "bullet"
-                    : item.blockType === "orderedList"
-                    ? "numbered"
-                    : "paragraph";
+                        ? "bullet"
+                        : item.blockType === "orderedList"
+                            ? "numbered"
+                            : "paragraph";
             return `${item.id} [${typeLabel}]: "${item.text}"`;
         })
         .join("\n");
@@ -280,12 +280,12 @@ ${itemsText}
 **RULES:**
 1. Always include an "operation" object with a "type".
 2. Paragraphs/headings: Use inline markdown (**bold**, *italic*, ~~strike~~, \`code\`).
-3. Headings: Never include markdown heading markers (#, ##, ###) in any text; use "headingLevel" on operations instead.
-4. List items: Inline markdown only (no bullets, already in list).
+3. Headings: NEVER include markdown heading markers (#, ##, ###) in any text; use "headingLevel" on operations instead.
+4. List items: INLINE markdown only (no bullets, already in list).
 5. insert-item: "items" are sentences for paragraphs/headings, list items for lists.
 6. insert-block: set "blockType" and "headingLevel" (use null when not heading).
 7. transform-block: replace the entire block with the provided items + blockType.
-8. Paragraph/heading items must be single sentences with no line breaks.
+8. Paragraph/heading items MUST be single sentences with no line breaks.
 9. For multi-sentence paragraphs, include multiple items in the same block (one sentence per item).
 10. Paragraph breaks must be separate blocks; never include blank lines or multiple paragraphs in one item.
 11. If multiple paragraphs are needed, use multiple insert-block operations (one per paragraph).

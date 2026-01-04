@@ -11,6 +11,7 @@ import { LoadingProvider, useLoadingContext } from "@/components/LoadingProvider
 import { EditorProvider } from "@/components/editor/EditorContext";
 import { ChatProvider } from "@/components/chat/ChatContext";
 import { ChatPanelProvider } from "@/components/chat/ChatPanelContext";
+import { OnboardingProvider } from "@/components/onboarding/OnboardingContext";
 import { editorExtensions } from "@/editor/extensions";
 
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -55,9 +56,11 @@ export default function AppLayout({
 }) {
   return (
     <SessionProvider>
-      <LoadingProvider>
-        <AppShell>{children}</AppShell>
-      </LoadingProvider>
+      <OnboardingProvider>
+        <LoadingProvider>
+          <AppShell>{children}</AppShell>
+        </LoadingProvider>
+      </OnboardingProvider>
     </SessionProvider>
   );
 }

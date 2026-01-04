@@ -18,8 +18,6 @@ import {
 import { useChatScroll } from "./useChatScroll";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 
-const TITLE_MESSAGE_THRESHOLD = 2;
-
 export default function Chat() {
   const { submitAiInstruction, aiInteractionState, lastAiMode } =
     useEditorContext();
@@ -44,6 +42,15 @@ export default function Chat() {
     sessionId,
   });
 
+  const requestTitleIfNeeded = useCallback(async () => {
+    if (title) return;
+    try {
+      await requestTitle();
+    } catch (error) {
+      console.error("[chat] Failed to request title", error);
+    }
+  }, [requestTitle, title]);
+
   useEffect(() => {
     registerScrollToBottom(scrollToBottom);
     return () => {
@@ -57,8 +64,6 @@ export default function Chat() {
 
     const sessionPromise = ensureSession();
     const userMessageId = addUserMessage(trimmed);
-    const nextUserCount =
-      messages.filter((message) => message.role === "user").length + 1;
     const persistUserMessage = async () => {
       const sessionId = await sessionPromise;
       const saved = await appendMessageMutation.mutateAsync({
@@ -67,9 +72,7 @@ export default function Chat() {
         content: trimmed,
       });
       setMessagePersistedId(userMessageId, saved.id);
-      if (!title && nextUserCount >= TITLE_MESSAGE_THRESHOLD) {
-        await requestTitle();
-      }
+      await requestTitleIfNeeded();
     };
 
     persistUserMessage().catch((error) => {
@@ -125,6 +128,7 @@ export default function Chat() {
                   content: option.content,
                 }))
               );
+              await requestTitleIfNeeded();
             };
 
             persistModelMessage().catch((error) => {
@@ -253,6 +257,7 @@ export default function Chat() {
                   content: item.content,
                 }))
               );
+              await requestTitleIfNeeded();
             };
 
             persistModelMessage().catch((error) => {

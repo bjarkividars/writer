@@ -13,6 +13,7 @@ const STORAGE_KEY = "writer_theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 export type ThemePreference = "light" | "system" | "dark";
+export type ResolvedTheme = "light" | "dark";
 
 const isThemePreference = (value: string | null): value is ThemePreference =>
   value === "light" || value === "system" || value === "dark";
@@ -28,6 +29,7 @@ const applyThemePreference = (
 
 type ThemePreferenceContextValue = {
   theme: ThemePreference;
+  resolvedTheme: ResolvedTheme;
   setTheme: (theme: ThemePreference) => void;
 };
 
@@ -36,14 +38,19 @@ const ThemePreferenceContext =
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ThemePreference>("system");
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (isThemePreference(stored)) {
-      setTheme(stored);
+      setTimeout(() => {
+        setTheme(stored);
+      }, 0);
     }
-    setHydrated(true);
+    setTimeout(() => {
+      setHydrated(true);
+    }, 0);
   }, []);
 
   useEffect(() => {
@@ -52,7 +59,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
 
     const media = window.matchMedia(MEDIA_QUERY);
-    const apply = () => applyThemePreference(theme, media.matches);
+    const apply = () => {
+      const nextResolved =
+        theme === "system" ? (media.matches ? "dark" : "light") : theme;
+      setResolvedTheme(nextResolved);
+      applyThemePreference(theme, media.matches);
+    };
 
     apply();
 
@@ -72,7 +84,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, theme);
   }, [theme, hydrated]);
 
-  const value = useMemo(() => ({ theme, setTheme }), [theme]);
+  const value = useMemo(
+    () => ({ theme, resolvedTheme, setTheme }),
+    [theme, resolvedTheme]
+  );
 
   return (
     <ThemePreferenceContext.Provider value={value}>

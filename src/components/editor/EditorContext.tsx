@@ -65,7 +65,10 @@ type EditorContextValue = {
   isAiMode: boolean;
   selectedText: string;
   // AI editing
-  submitAiInstruction: (instruction: string, options?: AiInstructionOptions) => void;
+  submitAiInstruction: (
+    instruction: string,
+    options?: AiInstructionOptions
+  ) => void;
   undoLastEdit: () => void;
   aiInteractionState: "idle" | "loading" | "streaming" | "editing" | "complete";
   lastAiMode: AiEditMode;
@@ -75,7 +78,7 @@ type EditorContextValue = {
 };
 
 const EditorContext = createContext<EditorContextValue | null>(null);
-const TITLE_DOC_THRESHOLD = 300;
+const TITLE_DOC_THRESHOLD = 200;
 
 export function useEditorContext() {
   const context = useContext(EditorContext);
@@ -227,11 +230,6 @@ export function EditorProvider({
         aiEdit.aiInteractionState === "complete") &&
       editor
     ) {
-      console.log(
-        "[EditorContext] Removing highlights, state:",
-        aiEdit.aiInteractionState
-      );
-
       // Remove all aiHighlight marks from the entire document
       const doc = editor.state.doc;
       editor
@@ -255,8 +253,6 @@ export function EditorProvider({
       // Clear the highlighted range tracking
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setHighlightedRange(null);
-
-      console.log("[EditorContext] Highlights removed");
     }
   }, [aiEdit.aiInteractionState, editor]);
 

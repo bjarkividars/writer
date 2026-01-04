@@ -44,6 +44,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [sessionSource, setSessionSource] = useState<SessionSource>(null);
   const [title, setTitle] = useState<string | null>(null);
   const [isHydrated, setHydrated] = useState(false);
+  const sessionIdRef = useRef<string | null>(null);
   const createPromiseRef = useRef<Promise<string> | null>(null);
   const titlePromiseRef = useRef<Promise<string | null> | null>(null);
   const pendingUrlSessionIdRef = useRef<string | null>(null);
@@ -60,6 +61,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     (nextSessionId: string | null, source?: SessionSource) => {
       const nextSource = source ?? (nextSessionId ? "created" : null);
       setSessionIdState(nextSessionId);
+      sessionIdRef.current = nextSessionId;
       setSessionSource(nextSource);
       setTitle(null);
       titlePromiseRef.current = null;
@@ -94,8 +96,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
   }, []);
 
   const ensureSession = useCallback(async () => {
-    if (sessionId) {
-      return sessionId;
+    if (sessionIdRef.current) {
+      return sessionIdRef.current;
     }
 
     if (createPromiseRef.current) {
@@ -105,6 +107,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     const promise = (async () => {
       try {
         const response = await createSessionMutation.mutateAsync(undefined);
+        sessionIdRef.current = response.sessionId;
         setSessionId(response.sessionId, "created");
         pendingUrlSessionIdRef.current = response.sessionId;
         await refreshSessions();
@@ -116,7 +119,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
     createPromiseRef.current = promise;
     return promise;
-  }, [sessionId, setSessionId, refreshSessions, createSessionMutation]);
+  }, [setSessionId, refreshSessions, createSessionMutation]);
 
   useEffect(() => {
     const pendingSessionId = pendingUrlSessionIdRef.current;

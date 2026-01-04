@@ -47,11 +47,20 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
     []
   );
   const handleChatPanelResize = useCallback(
-    ({ inPixels }: { inPixels: number }) => {
+    ({
+      inPixels,
+      asPercentage,
+    }: {
+      inPixels: number;
+      asPercentage: number;
+    }) => {
       if (!Number.isFinite(inPixels)) return;
-      setChatCollapsed(inPixels <= 1);
+      const collapsed =
+        chatPanelRef.current?.isCollapsed() ??
+        (inPixels <= 1 || asPercentage <= 1);
+      setChatCollapsed(collapsed);
     },
-    [setChatCollapsed]
+    [chatPanelRef, setChatCollapsed]
   );
   const handleSeparatorClick = useCallback(() => {
     if (!isChatCollapsed) return;
@@ -83,7 +92,10 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
     <div className="relative h-full w-full">
       <SessionHydrator />
       <LoadingOverlay show={isInitialLoading} position="absolute" />
-      <Group orientation={groupOrientation} className="mx-0 flex h-full w-full ">
+      <Group
+        orientation={groupOrientation}
+        className="mx-0 flex h-full w-full "
+      >
         <Panel className="h-full" onResize={handleDocumentPanelResize}>
           <ScrollAreaRoot
             className="relative h-full min-h-full"
@@ -104,33 +116,29 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
         </Panel>
 
         <Separator
-          className={`flex items-center justify-center chat-separator ${
-            isMobile ? "bg-muted/40" : ""
-          }`}
+          className="chat-separator"
           data-chat-collapsed={isChatCollapsed ? "true" : "false"}
         >
-          <button
-            type="button"
-            onClick={handleSeparatorClick}
-            className={`chat-separator-button flex items-center justify-center transition-colors ${
-              isMobile
-                ? "h-6 w-12 rounded-full bg-muted/60 text-muted-foreground"
-                : "h-7 w-7 rounded-md text-muted-foreground hover:bg-hover"
-            }`}
-            aria-label={
-              isChatCollapsed ? "Expand chat panel" : "Resize chat panel"
-            }
-          >
-            {isChatCollapsed ? (
-              isMobile ? (
-                <ChevronsUp className="w-4 h-4" />
+          {(!isMobile || isChatCollapsed) && (
+            <button
+              type="button"
+              onClick={handleSeparatorClick}
+              className="chat-separator-button"
+              aria-label={
+                isChatCollapsed ? "Expand chat panel" : "Resize chat panel"
+              }
+            >
+              {isChatCollapsed ? (
+                isMobile ? (
+                  <ChevronsUp className="w-3 h-3" />
+                ) : (
+                  <ChevronsLeft className="w-4 h-4" />
+                )
               ) : (
-                <ChevronsLeft className="w-4 h-4" />
-              )
-            ) : isMobile ? null : (
-              <Equal className="w-4 h-4 rotate-90" />
-            )}
-          </button>
+                <Equal className="w-4 h-4 rotate-90" />
+              )}
+            </button>
+          )}
         </Separator>
 
         <Panel

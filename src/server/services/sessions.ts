@@ -6,10 +6,10 @@ import { DocumentContentSchema } from "@/lib/api/schemas";
 import { ServiceError } from "@/server/services/errors";
 
 const TitleSchema = z.object({
-  title: z.string(),
+  title: z.string().nullable(),
 });
 
-const MIN_CONTEXT_CHARS = 80;
+const MIN_CONTEXT_CHARS = 60;
 const MAX_TITLE_LENGTH = 80;
 
 type DocumentContent = z.infer<typeof DocumentContentSchema>;
@@ -66,10 +66,12 @@ function extractPlainText(value: unknown): string {
   return output.trim();
 }
 
-function normalizeTitle(value: string) {
+function normalizeTitle(value: string | null) {
+  if (!value) return null;
   const cleaned = value.replace(/["”“]/g, "").replace(/\s+/g, " ").trim();
   const withoutPunct = cleaned.replace(/[.!?]+$/g, "").trim();
-  return withoutPunct.slice(0, MAX_TITLE_LENGTH);
+  const trimmed = withoutPunct.slice(0, MAX_TITLE_LENGTH).trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function mapMessage(message: {
@@ -243,16 +245,22 @@ export async function generateSessionTitle(sessionId: string): Promise<{ title: 
     .map((message) => `${message.role}: ${message.content}`)
     .join("\n");
 
-  if (
-    documentText.trim().length < MIN_CONTEXT_CHARS &&
-    messageText.trim().length < MIN_CONTEXT_CHARS
-  ) {
+  const trimmedDocumentText = documentText.trim();
+  const trimmedMessageText = messageText.trim();
+  const hasMessageContext = trimmedMessageText.length > 0;
+
+  if (!trimmedDocumentText && !trimmedMessageText) {
+    return { title: null };
+  }
+
+  if (!hasMessageContext && trimmedDocumentText.length < MIN_CONTEXT_CHARS) {
     return { title: null };
   }
 
   const prompt = `Create a short, clear session title (4-8 words).
 Use sentence case. No quotes. Avoid trailing punctuation.
 Focus on the main topic.
+If you cannot confidently name the session yet, return null.
 
 Document:
 ${documentText || "(empty)"}

@@ -112,12 +112,21 @@ export function useGenerateTitleMutation(
 export function useSaveDocumentMutation(
   options?: MutationOptions<SaveDocumentOutput, SaveDocumentInput>
 ) {
+  const queryClient = useQueryClient();
   const { onSuccess, ...rest } = options ?? {};
 
   return useMutation({
     ...orpc.session.saveDocument.mutationOptions(),
     ...rest,
     onSuccess: async (data, variables, context, mutationContext) => {
+      await queryClient.invalidateQueries({
+        queryKey: orpc.sessions.list.queryKey(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: orpc.session.get.queryKey({
+          input: { sessionId: variables.sessionId },
+        }),
+      });
       await onSuccess?.(data, variables, context, mutationContext);
     },
   });

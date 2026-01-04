@@ -13,8 +13,8 @@ export default function LoadingOverlay({
   position = "fixed",
   className,
 }: LoadingOverlayProps) {
-  const { theme } = useThemePreference();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useThemePreference();
+  const isDark = resolvedTheme === "dark";
   if (!show) return null;
 
   const positionClass = position === "absolute" ? "absolute" : "fixed";
@@ -33,7 +33,7 @@ export default function LoadingOverlay({
         <img
           src="/pencil.gif"
           alt=""
-          className={`w-16 h-16 ${isDark ? "dark:invert dark:brightness-82 dark:contrast-125" : ""}`}
+          className={`w-16 h-16 ${isDark ? "invert brightness-82 contrast-125" : ""}`}
         />
         <p className="text-sm text-foreground-muted">
           Setting up your workspace
