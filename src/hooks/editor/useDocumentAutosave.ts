@@ -29,12 +29,7 @@ export function useDocumentAutosave(
   }, [saveMutation.mutateAsync]);
 
   const flushSave = useCallback(async () => {
-    console.log("[autosave] Flush requested");
     if (isSavingRef.current || !pendingContentRef.current) {
-      console.log("[autosave] Flush skipped", {
-        isSaving: isSavingRef.current,
-        hasPending: !!pendingContentRef.current,
-      });
       return;
     }
 
@@ -42,18 +37,14 @@ export function useDocumentAutosave(
     pendingContentRef.current = null;
     const serialized = JSON.stringify(content);
     if (serialized === lastSavedRef.current) {
-      console.log("[autosave] Skipping save (no changes)");
       return;
     }
 
     isSavingRef.current = true;
-    console.log("[autosave] Saving document...");
     try {
       const sessionId = await ensureSession();
-      console.log("[autosave] Ensured session", sessionId);
       await mutateAsyncRef.current({ sessionId, content });
       lastSavedRef.current = serialized;
-      console.log("[autosave] Save complete", sessionId);
       onSavedRef.current?.(sessionId, content, latestTextRef.current);
     } catch (error) {
       console.error("[autosave] Failed to save document", error);
@@ -72,7 +63,6 @@ export function useDocumentAutosave(
     if (!editor) return;
     if (!ensureRequestedRef.current) {
       ensureRequestedRef.current = true;
-      console.log("[autosave] Ensuring session...");
       ensureSession().catch((error) => {
         console.error("[autosave] Failed to ensure session", error);
         ensureRequestedRef.current = false;
@@ -80,14 +70,10 @@ export function useDocumentAutosave(
     }
     pendingContentRef.current = editor.getJSON();
     latestTextRef.current = editor.getText();
-    console.log("[autosave] Scheduled save", {
-      textLength: latestTextRef.current.length,
-    });
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
     timerRef.current = setTimeout(() => {
-      console.log("[autosave] Debounce timer fired");
       flushSave().catch((flushError) => {
         console.error("[autosave] Failed to save document", flushError);
       });

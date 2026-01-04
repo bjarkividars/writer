@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/Dialog";
+import { Button } from "@/components/Button";
 
 type DeleteSessionDialogProps = {
   open: boolean;
@@ -45,9 +46,9 @@ export default function DeleteSessionDialog({
           </DialogDescription>
           <div className="flex gap-2 justify-end">
             <DialogClose className="btn-secondary btn-md">Cancel</DialogClose>
-            <button onClick={handleConfirm} className="btn-danger btn-md">
+            <Button onClick={handleConfirm} className="btn-danger btn-md">
               Delete
-            </button>
+            </Button>
           </div>
         </DialogPopup>
       </DialogPortal>

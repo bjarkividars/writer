@@ -2,6 +2,7 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useThemePreference } from "./useThemePreference";
+import { Button } from "@/components/Button";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -23,7 +24,7 @@ export default function SidebarThemeToggle() {
           const isActive = theme === option.value;
           const Icon = option.icon;
           return (
-            <button
+            <Button
               key={option.value}
               type="button"
               role="radio"
@@ -37,7 +38,7 @@ export default function SidebarThemeToggle() {
             >
               <Icon className="h-3.5 w-3.5" />
               <span className="sr-only">{option.label}</span>
-            </button>
+            </Button>
           );
         })}
       </div>

@@ -6,8 +6,9 @@ import { useSessionContext } from "@/components/session/SessionContext";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { useUpdateSessionMutation } from "@/hooks/orpc/useSessionMutations";
 import { Download, ChevronDown, FileDown, Clipboard } from "lucide-react";
-import { Menu, Tooltip } from "@base-ui/react";
+import { Menu } from "@base-ui/react";
 import { tiptapToMarkdown } from "@/lib/editor/markdown";
+import { Button } from "@/components/Button";
 
 export default function Header() {
   const { sessionId, title, setTitle } = useSessionContext();
@@ -130,44 +131,30 @@ export default function Header() {
             placeholder="Untitled"
           />
         ) : (
-          <Tooltip.Root>
-            <Tooltip.Trigger
-              render={(props) => (
-                <button
-                  {...props}
-                  onClick={(e) => {
-                    handleStartEdit();
-                    props.onClick?.(e);
-                  }}
-                  className="text-lg font-medium text-foreground hover:text-foreground/80 transition-colors text-left truncate cursor-pointer"
-                  disabled={!sessionId}
-                >
-                  {displayTitle}
-                </button>
-              )}
-            />
-            <Tooltip.Portal>
-              <Tooltip.Positioner sideOffset={4}>
-                <Tooltip.Popup className="rounded bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md">
-                  Click to edit
-                </Tooltip.Popup>
-              </Tooltip.Positioner>
-            </Tooltip.Portal>
-          </Tooltip.Root>
+          <Button
+            onClick={handleStartEdit}
+            className="text-lg font-medium text-foreground hover:text-foreground/80 transition-colors text-left truncate cursor-pointer"
+            disabled={!sessionId}
+            tooltip="Click to edit"
+            tooltipSideOffset={4}
+          >
+            {displayTitle}
+          </Button>
         )}
       </div>
 
       <Menu.Root>
         <Menu.Trigger
+          openOnHover
           render={(props) => (
-            <button
+            <Button
               {...props}
               className="btn-secondary btn-sm flex items-center gap-2"
               disabled={!canExport}
             >
               <Download className="w-4 h-4" />
               Export
-            </button>
+            </Button>
           )}
         />
         <Menu.Portal>

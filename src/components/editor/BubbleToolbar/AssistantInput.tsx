@@ -9,6 +9,7 @@ import {
   ScrollAreaScrollbar,
   ScrollAreaThumb,
 } from "@/components/ScrollArea";
+import { Button } from "@/components/Button";
 
 type AssistantInputProps = {
   expanded: boolean;
@@ -134,14 +135,14 @@ export default function AssistantInput({
             </div>
           ) : (
             value.trim() && (
-              <button
+              <Button
                 type="button"
                 onClick={handleSubmit}
                 onMouseDown={(e) => e.preventDefault()}
                 className="btn-primary btn-icon mb-1"
               >
                 <ArrowRight className="h-4 w-4" />
-              </button>
+              </Button>
             )
           )}
         </div>

@@ -4,6 +4,7 @@ import { Menu } from "@base-ui/react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useSidebarContext } from "./SidebarContext";
 import { useThemePreference, type ThemePreference } from "./useThemePreference";
+import { Button } from "@/components/Button";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -33,14 +34,14 @@ export default function FloatingThemeMenu() {
       <Menu.Root>
         <Menu.Trigger
           render={(props) => (
-            <button
+            <Button
               {...props}
               type="button"
               aria-label="Theme"
               className="cursor-pointer flex h-7 w-7 items-center justify-center rounded border border-transparent bg-background text-foreground-muted transition-all duration-200 hover:bg-hover hover:text-foreground data-pressed:bg-hover data-pressed:text-foreground"
             >
               <ActiveIcon className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           )}
         />
         <Menu.Portal>

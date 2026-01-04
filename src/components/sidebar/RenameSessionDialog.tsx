@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/Dialog";
+import { Button } from "@/components/Button";
 
 type RenameSessionDialogProps = {
   open: boolean;
@@ -71,13 +72,13 @@ export default function RenameSessionDialog({
           />
           <div className="flex gap-2 justify-end">
             <DialogClose className="btn-secondary btn-md">Cancel</DialogClose>
-            <button
+            <Button
               onClick={handleConfirm}
               disabled={!title.trim()}
               className="btn-primary btn-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Rename
-            </button>
+            </Button>
           </div>
         </DialogPopup>
       </DialogPortal>

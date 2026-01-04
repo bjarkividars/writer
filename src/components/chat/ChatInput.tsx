@@ -9,7 +9,7 @@ import {
   ScrollAreaThumb,
 } from "@/components/ScrollArea";
 import { ArrowUp } from "lucide-react";
-import { Button } from "@base-ui/react";
+import { Button } from "@/components/Button";
 
 type ChatInputProps = {
   onSubmit: (value: string) => void;
@@ -59,7 +59,7 @@ export default function ChatInput({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type your message here..."
+                  placeholder="Ask for help…"
                   disabled={disabled}
                   className="block w-full resize-none overflow-hidden rounded-md bg-transparent py-2.5 px-3 text-sm text-foreground placeholder:text-foreground/50 focus:outline-none"
                   rows={1}

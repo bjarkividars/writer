@@ -18,6 +18,7 @@ import LoadingOverlay from "@/components/LoadingOverlay";
 import { useLoadingContext } from "@/components/LoadingProvider";
 import { ChevronsLeft, ChevronsUp, Equal } from "lucide-react";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
+import { Button } from "@/components/Button";
 
 type WorkspaceProps = {
   initialIsMobile?: boolean;
@@ -120,7 +121,7 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
           data-chat-collapsed={isChatCollapsed ? "true" : "false"}
         >
           {(!isMobile || isChatCollapsed) && (
-            <button
+            <Button
               type="button"
               onClick={handleSeparatorClick}
               className="chat-separator-button"
@@ -137,7 +138,7 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
               ) : (
                 <Equal className="w-4 h-4 rotate-90" />
               )}
-            </button>
+            </Button>
           )}
         </Separator>
 

@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import type { Editor } from "@tiptap/react";
 import { Menu } from "@base-ui/react";
 import { useEditorContext } from "@/components/editor/EditorContext";
+import { Button } from "@/components/Button";
 
 type TextFormatValue =
   | "paragraph"
@@ -77,7 +78,7 @@ export default function TextFormat({ editor }: TextFormatProps) {
     <Menu.Root>
       <Menu.Trigger
         render={(props) => (
-          <button
+          <Button
             {...props}
             type="button"
             onMouseDown={(event) => {
@@ -89,7 +90,7 @@ export default function TextFormat({ editor }: TextFormatProps) {
           >
             <span className="max-w-36 truncate">{currentLabel}</span>
             <ChevronDown className="h-3 w-3" />
-          </button>
+          </Button>
         )}
       />
 

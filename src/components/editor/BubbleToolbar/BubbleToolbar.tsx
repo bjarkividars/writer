@@ -7,6 +7,7 @@ import AssistantInput from "@/components/editor/BubbleToolbar/AssistantInput";
 import FormattingButtons from "@/components/editor/BubbleToolbar/FormattingButtons";
 import { useSelectionBubbleAnchor } from "@/hooks/editor/useSelectionBubbleAnchor";
 import { Popover, Toolbar, Tooltip } from "@base-ui/react";
+import { Button } from "@/components/Button";
 
 // Snapshot ref into state to avoid reading .current during render
 function useResolvedElement<T extends HTMLElement>(ref: RefObject<T | null>) {
@@ -151,12 +152,12 @@ export default function BubbleToolbar() {
                     <span className="text-xs text-muted-foreground truncate flex-1">
                       {completedPrompt.text}
                     </span>
-                    <button
+                    <Button
                       onClick={handleUndo}
                       className="btn-secondary btn-sm shrink-0"
                     >
                       Undo
-                    </button>
+                    </Button>
                   </div>
                 )}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Popover } from "@base-ui/react";
+import { Button } from "@/components/Button";
 
 type SessionItemMenuProps = {
   onRename: () => void;
@@ -40,20 +41,20 @@ export default function SessionItemMenu({
         <Popover.Positioner side="bottom" align="end" sideOffset={4}>
           <Popover.Popup className="rounded-md border border-border bg-background shadow-lg min-w-[160px] z-50">
             <div className="flex flex-col">
-              <button
+              <Button
                 onClick={handleRename}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-hover transition-colors text-left w-full cursor-pointer"
               >
                 <Pencil className="w-4 h-4" />
                 Rename
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleDelete}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-hover transition-colors text-left w-full cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
-              </button>
+              </Button>
             </div>
           </Popover.Popup>
         </Popover.Positioner>

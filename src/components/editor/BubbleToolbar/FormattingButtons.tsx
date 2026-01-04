@@ -6,6 +6,7 @@ import { useEditorContext } from "@/components/editor/EditorContext";
 import ToolbarButton from "@/components/editor/BubbleToolbar/ToolbarButton";
 import TextFormat from "@/components/editor/BubbleToolbar/TextFormat";
 import { Separator } from "@base-ui/react";
+import { Button } from "@/components/Button";
 
 type FormattingButtonsProps = {
   className?: string;
@@ -91,7 +92,7 @@ export default function FormattingButtons({
         className="absolute inset-y-0 right-0 flex items-center transition-opacity duration-150 data-[hidden=true]:opacity-0 data-[hidden=true]:pointer-events-none"
         data-hidden={!isAiMode}
       >
-        <button
+        <Button
           ref={moreRef}
           type="button"
           onClick={() => exitAiMode()}
@@ -99,7 +100,7 @@ export default function FormattingButtons({
           className="btn-ghost btn-icon opacity-50 hover:opacity-100"
         >
           <MoreVertical className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );

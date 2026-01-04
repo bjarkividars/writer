@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatOption } from "./ChatContext";
+import { Button } from "@/components/Button";
 
 type ChatOptionsProps = {
   options: ChatOption[];
@@ -20,7 +21,7 @@ export default function ChatOptions({
       {options.map((option, index) => {
         const isSelected = selectedIndex === index;
         return (
-          <button
+          <Button
             key={option.id ?? `${option.index}-${option.title}`}
             type="button"
             disabled={disabled}
@@ -41,7 +42,7 @@ export default function ChatOptions({
                 {option.content}
               </span>
             ) : null}
-          </button>
+          </Button>
         );
       })}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditorContext } from "@/components/editor/EditorContext";
+import { Button } from "@/components/Button";
 
 export default function EditorEmptyState() {
   const { editor, isEditorEmpty, isEditorFocused } = useEditorContext();
@@ -9,9 +10,9 @@ export default function EditorEmptyState() {
     return null;
   }
 
-  return (
+    return (
     <div className="absolute inset-0 z-10">
-      <button
+      <Button
         type="button"
         className="flex h-full w-full cursor-text items-center justify-center border-0 bg-transparent p-0 text-center"
         aria-label="Focus the document to start writing"
@@ -25,7 +26,7 @@ export default function EditorEmptyState() {
             Draft your content here. You can paste, write, or edit freely.
           </p>
         </div>
-      </button>
+      </Button>
     </div>
   );
 }

@@ -58,6 +58,17 @@ export default function Sidebar() {
         <div className="h-full flex flex-col overflow-hidden">
           <SidebarHeader />
           <SidebarContent sessions={sessions} loading={loading} />
+          <div className="px-4 pb-2 text-xs text-foreground-muted w-[280px]">
+            Check out my other projects{" "}
+            <a
+              href="https://bjarki.me"
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground hover:text-foreground/80 transition-colors"
+            >
+              bjarki.me
+            </a>
+          </div>
           <SidebarThemeToggle />
         </div>
       </aside>
