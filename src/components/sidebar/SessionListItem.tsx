@@ -13,6 +13,7 @@ import {
   useUpdateSessionMutation,
 } from "@/hooks/orpc/useSessionMutations";
 import type { SessionSummary } from "@/lib/orpc/types";
+import { useSessionContext } from "@/components/session/SessionContext";
 
 type SessionListItemProps = {
   session: SessionSummary;
@@ -22,6 +23,7 @@ export default function SessionListItem({ session }: SessionListItemProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { close } = useSidebarContext();
+  const { sessionId, setTitle } = useSessionContext();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const renameMutation = useUpdateSessionMutation();
@@ -45,6 +47,9 @@ export default function SessionListItem({ session }: SessionListItemProps) {
   const handleRenameConfirm = async (newTitle: string) => {
     try {
       await renameMutation.mutateAsync({ sessionId: session.id, title: newTitle });
+      if (sessionId === session.id) {
+        setTitle(newTitle);
+      }
     } catch (error) {
       console.error("Failed to rename session:", error);
     }

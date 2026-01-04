@@ -184,11 +184,13 @@ export async function saveSessionDocument(input: {
   sessionId: string;
   content: DocumentContent;
 }): Promise<{ sessionId: string; updatedAt: string }> {
+  console.log("[sessions] Saving document", input.sessionId);
   const document = await prisma.document.upsert({
     where: { sessionId: input.sessionId },
     update: { content: input.content },
     create: { sessionId: input.sessionId, content: input.content },
   });
+  console.log("[sessions] Document saved", input.sessionId);
 
   return {
     sessionId: input.sessionId,

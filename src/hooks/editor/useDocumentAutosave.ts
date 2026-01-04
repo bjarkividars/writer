@@ -16,10 +16,25 @@ export function useDocumentAutosave(
   const isSavingRef = useRef(false);
   const latestTextRef = useRef("");
   const ensureRequestedRef = useRef(false);
+  const onSavedRef = useRef<typeof onSaved>(onSaved);
   const saveMutation = useSaveDocumentMutation();
+  const mutateAsyncRef = useRef(saveMutation.mutateAsync);
+
+  useEffect(() => {
+    onSavedRef.current = onSaved;
+  }, [onSaved]);
+
+  useEffect(() => {
+    mutateAsyncRef.current = saveMutation.mutateAsync;
+  }, [saveMutation.mutateAsync]);
 
   const flushSave = useCallback(async () => {
+    console.log("[autosave] Flush requested");
     if (isSavingRef.current || !pendingContentRef.current) {
+      console.log("[autosave] Flush skipped", {
+        isSaving: isSavingRef.current,
+        hasPending: !!pendingContentRef.current,
+      });
       return;
     }
 
@@ -27,15 +42,19 @@ export function useDocumentAutosave(
     pendingContentRef.current = null;
     const serialized = JSON.stringify(content);
     if (serialized === lastSavedRef.current) {
+      console.log("[autosave] Skipping save (no changes)");
       return;
     }
 
     isSavingRef.current = true;
+    console.log("[autosave] Saving document...");
     try {
       const sessionId = await ensureSession();
-      await saveMutation.mutateAsync({ sessionId, content });
+      console.log("[autosave] Ensured session", sessionId);
+      await mutateAsyncRef.current({ sessionId, content });
       lastSavedRef.current = serialized;
-      onSaved?.(sessionId, content, latestTextRef.current);
+      console.log("[autosave] Save complete", sessionId);
+      onSavedRef.current?.(sessionId, content, latestTextRef.current);
     } catch (error) {
       console.error("[autosave] Failed to save document", error);
       pendingContentRef.current = content;
@@ -47,12 +66,13 @@ export function useDocumentAutosave(
         });
       }
     }
-  }, [ensureSession, onSaved, saveMutation]);
+  }, [ensureSession]);
 
   const scheduleSave = useCallback(() => {
     if (!editor) return;
     if (!ensureRequestedRef.current) {
       ensureRequestedRef.current = true;
+      console.log("[autosave] Ensuring session...");
       ensureSession().catch((error) => {
         console.error("[autosave] Failed to ensure session", error);
         ensureRequestedRef.current = false;
@@ -60,10 +80,14 @@ export function useDocumentAutosave(
     }
     pendingContentRef.current = editor.getJSON();
     latestTextRef.current = editor.getText();
+    console.log("[autosave] Scheduled save", {
+      textLength: latestTextRef.current.length,
+    });
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
     timerRef.current = setTimeout(() => {
+      console.log("[autosave] Debounce timer fired");
       flushSave().catch((flushError) => {
         console.error("[autosave] Failed to save document", flushError);
       });
