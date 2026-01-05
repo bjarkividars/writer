@@ -150,17 +150,17 @@ export default function ChatInput({
                       </div>
                     </div>
                   )}
-                  <div className="flex items-stretch">
-                  <div className="flex items-center pl-2">
-                    <Button
-                      type="button"
-                      onClick={handleAttachmentClick}
-                      className="btn-secondary btn-icon h-7 w-7"
-                      aria-label="Attach document"
-                      disabled={disabled}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
+                  <div className="flex shrink-0 items-end">
+                    <div className="flex items-center justify-center h-[40px] pl-2">
+                      <Button
+                        type="button"
+                        onClick={handleAttachmentClick}
+                        className="btn-secondary btn-icon h-7 w-7"
+                        aria-label="Attach document"
+                        disabled={disabled}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -215,17 +215,17 @@ export default function ChatInput({
                     </ScrollAreaRoot>
                     {input.trim() && (
                       <div className="flex shrink-0 items-end">
-                        <div className="flex items-center justify-center h-[40px] pr-3">
+                        <div className="flex items-center justify-center h-[40px] pr-2">
                           <Button
                             type="submit"
                             disabled={submitDisabled}
                             className="btn-primary w-6 h-6 rounded-md cursor-pointer disabled:opacity-60"
                           >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
+                            <ArrowUp className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                   </div>
                 </div>
               </form>
