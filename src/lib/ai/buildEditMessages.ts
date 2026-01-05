@@ -151,8 +151,10 @@ ${itemsText}`;
       }
     : { role: "user" as const, content: userPrompt };
 
+  const today = new Date().toISOString().slice(0, 10);
+
   return [
-    { role: "system", content: EDIT_SYSTEM_PROMPT },
+    { role: "system", content: `Today is ${today}.\n${EDIT_SYSTEM_PROMPT}` },
     ...historyMessages,
     instructionMessage,
   ];

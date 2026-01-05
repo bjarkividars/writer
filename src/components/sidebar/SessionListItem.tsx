@@ -78,7 +78,7 @@ export default function SessionListItem({ session }: SessionListItemProps) {
         href={`/${session.id}`}
         onClick={handleLinkClick}
         className={`
-          block px-5 py-2.5 pr-10 max-w-full
+          block px-4 py-2.5 pr-10 max-w-full
           transition-all duration-200 ease-out
           ${isActive ? "bg-hover" : "hover:bg-hover/60"}
         `}

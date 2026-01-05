@@ -255,7 +255,8 @@ export function findListItemRange(editor: Editor, pos: number) {
 }
 
 export function findBlockRange(editor: Editor, pos: number) {
-  const $pos = editor.state.doc.resolve(pos);
+  const safePos = clampPos(editor.state.doc, pos);
+  const $pos = editor.state.doc.resolve(safePos);
   for (let depth = $pos.depth; depth >= 0; depth -= 1) {
     const node = $pos.node(depth);
     if (node.type.name === "bulletList" || node.type.name === "orderedList") {

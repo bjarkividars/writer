@@ -5,10 +5,11 @@ import { jsPDF } from "jspdf";
 import { useSessionContext } from "@/components/session/SessionContext";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { useUpdateSessionMutation } from "@/hooks/orpc/useSessionMutations";
-import { Download, ChevronDown, FileDown, Clipboard } from "lucide-react";
+import { Download, FileDown, Clipboard } from "lucide-react";
 import { Menu } from "@/components/Menu";
 import { tiptapToMarkdown } from "@/lib/editor/markdown";
 import { Button } from "@/components/Button";
+import AnimatedTitle from "@/components/header/AnimatedTitle";
 
 export default function Header() {
   const { sessionId, title, setTitle } = useSessionContext();
@@ -17,8 +18,6 @@ export default function Header() {
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const renameMutation = useUpdateSessionMutation();
-
-  const displayTitle = title || "Untitled";
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -138,7 +137,7 @@ export default function Header() {
             tooltip="Click to edit"
             tooltipSideOffset={4}
           >
-            {displayTitle}
+            <AnimatedTitle title={title} isEditing={isEditing} />
           </Button>
         )}
       </div>

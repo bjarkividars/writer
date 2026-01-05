@@ -177,21 +177,74 @@ export function useAiEdit(editor: Editor | null) {
 
       let appliedAnyEdit = false;
       const insertAnchors = new Map<string, number>();
+      const transformAnchorsByBlock = new Map<number, string>();
 
       edits.forEach((edit, index) => {
         if (!isValidEdit(edit)) return;
 
-        const { key } = getEditKey(index, edit);
+        let nextEdit = edit;
+        const targetItemId =
+          hasTargetFields(edit.target) && typeof edit.target.itemId === "string"
+            ? edit.target.itemId
+            : null;
+        const targetBlockItem = targetItemId
+          ? blockMapRef.current.find((item) => item.id === targetItemId)
+          : undefined;
+
+        const editOperation = edit.operation;
+        const editOperationType =
+          typeof editOperation === "object" &&
+          editOperation !== null &&
+          "type" in editOperation
+            ? (editOperation as { type?: unknown }).type
+            : undefined;
+
+        if (
+          editOperationType === "transform-block" &&
+          targetBlockItem &&
+          (targetBlockItem.blockType === "paragraph" ||
+            targetBlockItem.blockType === "heading")
+        ) {
+          const existingAnchor = transformAnchorsByBlock.get(
+            targetBlockItem.blockNum
+          );
+          if (!existingAnchor) {
+            transformAnchorsByBlock.set(
+              targetBlockItem.blockNum,
+              targetBlockItem.id
+            );
+          } else if (existingAnchor !== targetBlockItem.id) {
+            const coercedOperation: Record<string, unknown> = {
+              type: "insert-block",
+              position: "after",
+              blockType:
+                typeof (editOperation as { blockType?: unknown }).blockType ===
+                "string"
+                  ? (editOperation as { blockType?: unknown }).blockType
+                  : targetBlockItem.blockType ?? "paragraph",
+              headingLevel:
+                typeof (editOperation as { headingLevel?: unknown })
+                  .headingLevel === "number"
+                  ? (editOperation as { headingLevel?: unknown }).headingLevel
+                  : null,
+              items: (editOperation as { items?: unknown }).items,
+              anchor: "block",
+            };
+            nextEdit = { ...edit, operation: coercedOperation };
+          }
+        }
+
+        const { key } = getEditKey(index, nextEdit);
         let state = editsState.current.get(key);
 
         // STEP 1: Resolve and store target (DON'T delete yet!)
-        if (!state?.targetSeen && edit.target !== undefined) {
-          const range = resolveTarget(edit.target);
+        if (!state?.targetSeen && nextEdit.target !== undefined) {
+          const range = resolveTarget(nextEdit.target);
           if (range) {
             const itemId =
-              hasTargetFields(edit.target) &&
-              typeof edit.target.itemId === "string"
-                ? edit.target.itemId
+              hasTargetFields(nextEdit.target) &&
+              typeof nextEdit.target.itemId === "string"
+                ? nextEdit.target.itemId
                 : undefined;
 
             // Store range without deleting
@@ -218,7 +271,7 @@ export function useAiEdit(editor: Editor | null) {
         if (!state?.targetSeen || !state.targetRange) return;
 
         const itemId = state.itemId;
-        const operation = edit.operation;
+        const operation = nextEdit.operation;
         const operationType =
           typeof operation === "object" &&
           operation !== null &&
@@ -231,13 +284,24 @@ export function useAiEdit(editor: Editor | null) {
           "position" in operation
             ? (operation as { position?: unknown }).position
             : undefined;
+        const anchor =
+          typeof operation === "object" &&
+          operation !== null &&
+          "anchor" in operation
+            ? (operation as { anchor?: unknown }).anchor
+            : undefined;
+        const blockAnchorKey =
+          anchor === "block" && typeof state.blockNum === "number"
+            ? `block-${state.blockNum}:${position}`
+            : null;
         const anchorKey =
-          typeof itemId === "string" &&
+          blockAnchorKey ??
+          (typeof itemId === "string" &&
           itemId.length > 0 &&
           (operationType === "insert-item" || operationType === "insert-block") &&
           (position === "before" || position === "after")
             ? `${itemId}:${position}`
-            : null;
+            : null);
 
         if (anchorKey && state.insertPos === undefined) {
           const anchorPos = insertAnchors.get(anchorKey);

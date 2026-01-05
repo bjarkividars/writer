@@ -108,14 +108,6 @@ export function handleTransformBlockOperation(args: {
     return false;
   }
 
-  if (!state.rangeDeleted && state.blockNum) {
-    for (let i = blockMap.length - 1; i >= 0; i -= 1) {
-      if (blockMap[i].blockNum === state.blockNum) {
-        blockMap.splice(i, 1);
-      }
-    }
-  }
-
   const beforeSize = editor.state.doc.nodeSize;
   insertPos = clampPos(editor.state.doc, insertPos);
   state.insertPos = insertPos;

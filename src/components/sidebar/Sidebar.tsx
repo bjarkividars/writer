@@ -50,25 +50,38 @@ export default function Sidebar() {
           overflow-hidden
           ${
             isOpen
-              ? "w-[var(--sidebar-width)] translate-x-0"
+              ? "w-(--sidebar-width) translate-x-0"
               : "w-0 -translate-x-full lg:translate-x-0"
           }
         `}
         aria-label="Sessions sidebar"
       >
-        <div className="h-full w-[var(--sidebar-width)] min-h-0 flex flex-col">
+        <div className="h-full w-(--sidebar-width) min-h-0 flex flex-col">
           <SidebarHeader />
           <SidebarContent sessions={sessions} loading={loading} />
-          <div className="px-4 py-2 text-xs text-foreground-muted w-full">
-            Check out my other projects{" "}
-            <a
-              href="https://bjarki.me"
-              target="_blank"
-              rel="noreferrer"
-              className="text-foreground hover:text-foreground/80 transition-colors"
-            >
-              bjarki.me
-            </a>
+          <div className="flex flex-col pt-4 pb-1">
+            <div className="px-4 text-xs text-foreground-muted w-full">
+              View the source code on{" "}
+              <a
+                href="https://github.com/bjarkividars/writer"
+                target="_blank"
+                rel="noreferrer"
+                className="text-foreground hover:text-foreground/80 transition-colors"
+              >
+                GitHub
+              </a>
+            </div>
+            <div className="px-4 py-2 text-xs text-foreground-muted w-full">
+              Check out my other projects{" "}
+              <a
+                href="https://bjarki.me"
+                target="_blank"
+                rel="noreferrer"
+                className="text-foreground hover:text-foreground/80 transition-colors"
+              >
+                bjarki.me
+              </a>
+            </div>
           </div>
           <SidebarThemeToggle />
         </div>

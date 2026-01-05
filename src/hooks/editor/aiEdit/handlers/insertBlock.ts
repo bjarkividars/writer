@@ -29,6 +29,8 @@ export function handleInsertBlockOperation(args: {
   const blockType = (operation as { blockType?: unknown }).blockType;
   const headingLevel = (operation as { headingLevel?: unknown }).headingLevel;
   const itemsValue = (operation as { items?: unknown }).items;
+  const anchor = (operation as { anchor?: unknown }).anchor;
+  const forceBlockAnchor = anchor === "block";
 
   const rawItems = isStringArray(itemsValue) ? itemsValue : [];
   const rawCombined = rawItems.join(" ");
@@ -61,12 +63,30 @@ export function handleInsertBlockOperation(args: {
 
   let insertPos = state.insertPos;
   if (insertPos === undefined) {
-    const blockRange = findBlockRange(editor, state.targetRange.from);
-    if (!blockRange) {
-      state.operationApplied = true;
-      return false;
+    let useItemAnchor = false;
+
+    if (
+      !forceBlockAnchor &&
+      state.blockType === "paragraph" &&
+      typeof state.itemId === "string"
+    ) {
+      const targetItem = blockMap.find((item) => item.id === state.itemId);
+      if (targetItem && targetItem.itemNum > 1) {
+        useItemAnchor = true;
+      }
     }
-    insertPos = position === "before" ? blockRange.from : blockRange.to;
+
+    if (useItemAnchor) {
+      insertPos =
+        position === "before" ? state.targetRange.from : state.targetRange.to;
+    } else {
+      const blockRange = findBlockRange(editor, state.targetRange.from);
+      if (!blockRange) {
+        state.operationApplied = true;
+        return false;
+      }
+      insertPos = position === "before" ? blockRange.from : blockRange.to;
+    }
     state.insertPos = insertPos;
   }
 
