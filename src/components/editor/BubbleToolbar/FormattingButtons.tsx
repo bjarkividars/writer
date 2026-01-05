@@ -54,7 +54,7 @@ export default function FormattingButtons({
     <div
       ref={containerRef}
       data-state={isAiMode ? "collapsed" : "open"}
-      className={`relative overflow-hidden transition-[width] duration-200 ease-out w-(--format-width) data-[state=collapsed]:w-(--more-width) ${className || ""}`}
+      className={`relative overflow-hidden transition-[width] duration-200 ease-out w-(--format-width) data-[state=collapsed]:w-(--more-width) ${className || ""} self-end mb-0.5`}
     >
       {/* Formatting buttons */}
       <div
@@ -89,7 +89,7 @@ export default function FormattingButtons({
 
       {/* More button - stacked on top */}
       <div
-        className="absolute inset-y-0 right-0 flex items-center transition-opacity duration-150 data-[hidden=true]:opacity-0 data-[hidden=true]:pointer-events-none"
+        className="absolute bottom-0.5 right-0 flex items-end transition-opacity duration-150 data-[hidden=true]:opacity-0 data-[hidden=true]:pointer-events-none"
         data-hidden={!isAiMode}
       >
         <Button

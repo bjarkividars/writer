@@ -195,7 +195,7 @@ export default function BubbleToolbar() {
 
                   {showFormattingButtons && (
                     <FormattingButtons
-                      className="transition-all duration-150 flex-shrink-0"
+                      className="transition-all duration-150 shrink-0"
                       isAiMode={isAiMode}
                     />
                   )}
