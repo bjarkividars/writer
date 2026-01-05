@@ -42,6 +42,7 @@ type AiInstructionOptions = {
   onMessageComplete?: (message: string) => void;
   onOptionsUpdate?: (options: AiEditOption[]) => void;
   onOptionsComplete?: (options: AiEditOption[]) => void;
+  onError?: (error: Error) => void;
 };
 
 type UndoState = {
@@ -413,6 +414,15 @@ export function EditorProvider({
           );
         });
 
+      const handleError =
+        options?.onError ??
+        (() => {
+          if (!inlineMessageId) return;
+          chat.setMessageContent(inlineMessageId, "");
+          chat.setMessageOptions(inlineMessageId, []);
+          chat.finishMessage(inlineMessageId);
+        });
+
       const sessionPromise = options?.sessionId
         ? Promise.resolve(options.sessionId)
         : ensureSession();
@@ -427,6 +437,7 @@ export function EditorProvider({
             onMessageComplete: handleMessageComplete,
             onOptionsUpdate: handleOptionsUpdate,
             onOptionsComplete: handleOptionsComplete,
+            onError: handleError,
           });
         })
         .catch((err) => {

@@ -1,8 +1,10 @@
 "use client";
 
-export type OnboardingTipId = "sidebar-manage-docs";
+export type OnboardingTipId =
+  | "sidebar-manage-docs"
+  | "chat-shortcut-back-to-doc";
 
-export type OnboardingEvent = "session-first-save";
+export type OnboardingEvent = "session-first-save" | "chat-shortcut-used";
 
 export type OnboardingTipConfig = {
   id: OnboardingTipId;
@@ -16,6 +18,12 @@ export const onboardingTips: OnboardingTipConfig[] = [
     id: "sidebar-manage-docs",
     event: "session-first-save",
     body: "Open the sidebar to manage or create documents anytime.",
+    cta: "Got it",
+  },
+  {
+    id: "chat-shortcut-back-to-doc",
+    event: "chat-shortcut-used",
+    body: "Use {{shortcut}} again to jump back to the document.",
     cta: "Got it",
   },
 ];

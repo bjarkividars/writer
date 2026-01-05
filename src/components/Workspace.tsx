@@ -19,6 +19,10 @@ import { useLoadingContext } from "@/components/LoadingProvider";
 import { ChevronsLeft, ChevronsUp, Equal } from "lucide-react";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 import { Button } from "@/components/Button";
+import {
+  useOnboardingTip,
+  useOnboardingTips,
+} from "@/components/onboarding/OnboardingContext";
 
 type WorkspaceProps = {
   initialIsMobile?: boolean;
@@ -30,7 +34,15 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
     isChatCollapsed,
     setChatCollapsed,
     openChatPanel,
+    focusChatInput,
+    isChatInputFocused,
   } = useChatPanelContext();
+  const { trackEvent } = useOnboardingTips();
+  const {
+    isActive: isShortcutTipActive,
+    hasShown: hasShownShortcutTip,
+    dismiss: dismissShortcutTip,
+  } = useOnboardingTip("chat-shortcut-back-to-doc");
   const [isMobile, setIsMobile] = useState(initialIsMobile);
   const { isInitialLoading } = useLoadingContext();
   const { editor, editorRootRef } = useEditorContext();
@@ -88,6 +100,51 @@ export default function Workspace({ initialIsMobile = false }: WorkspaceProps) {
     media.addListener(handleChange);
     return () => media.removeListener(handleChange);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "j";
+      if (!isShortcut) return;
+
+      const target = event.target as HTMLElement | null;
+      const isFormField =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT");
+      if (isFormField && !isChatInputFocused()) {
+        return;
+      }
+
+      event.preventDefault();
+      if (isChatInputFocused()) {
+        if (isShortcutTipActive) {
+          dismissShortcutTip();
+        }
+        editor?.commands.focus();
+        return;
+      }
+
+      if (isChatCollapsed) {
+        openChatPanel();
+      }
+      if (!isShortcutTipActive && !hasShownShortcutTip) {
+        trackEvent("chat-shortcut-used");
+      }
+      requestAnimationFrame(() => focusChatInput());
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    editor,
+    focusChatInput,
+    isChatCollapsed,
+    isChatInputFocused,
+    openChatPanel,
+  ]);
 
   return (
     <div className="relative h-full w-full">

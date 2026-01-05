@@ -216,9 +216,6 @@ export const AiEditOutput = z
       .describe(
         "Alternative suggestions for the user to choose from. Use an empty array when not needed."
       ),
-    complete: z
-      .boolean()
-      .describe("Set to true when all edits are finalized and ready to apply"),
   })
   .strict();
 
@@ -230,7 +227,6 @@ export type AiEditOutput = z.infer<typeof AiEditOutput>;
 export const ResolvedEditResponse = z
   .object({
   edits: z.array(ResolvedEditOp),
-  complete: z.boolean(),
   })
   .strict();
 

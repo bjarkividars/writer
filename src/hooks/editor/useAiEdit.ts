@@ -18,6 +18,7 @@ type AiEditRunOptions = {
   onMessageComplete?: (message: string) => void;
   onOptionsUpdate?: (options: AiEditOption[]) => void;
   onOptionsComplete?: (options: AiEditOption[]) => void;
+  onError?: (error: Error) => void;
 };
 
 /**
@@ -299,6 +300,8 @@ export function useAiEdit(editor: Editor | null) {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      let streamError: Error | null = null;
+
       try {
         const response = await fetch("/api/ai/edit", {
           method: "POST",
@@ -385,7 +388,8 @@ export function useAiEdit(editor: Editor | null) {
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
           console.error("[AI Edit] Stream error:", err);
-          setError(err as Error);
+          streamError = err;
+          setError(err);
         }
       } finally {
         setIsLoading(false);
@@ -394,9 +398,13 @@ export function useAiEdit(editor: Editor | null) {
         }
         abortControllerRef.current = null;
         setAiInteractionState("complete");
-        options?.onMessageComplete?.(messageRef.current);
-        if (optionsRef.current.length > 0) {
-          options?.onOptionsComplete?.(optionsRef.current);
+        if (streamError) {
+          options?.onError?.(streamError);
+        } else {
+          options?.onMessageComplete?.(messageRef.current);
+          if (optionsRef.current.length > 0) {
+            options?.onOptionsComplete?.(optionsRef.current);
+          }
         }
       }
     },

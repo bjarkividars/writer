@@ -32,6 +32,8 @@ export default function BubbleToolbar() {
     aiInteractionState,
     completedPrompt,
     bubbleDismissKey,
+    aiEditError,
+    lastAiMode,
   } = useEditorContext();
 
   const [inputValue, setInputValue] = useState("");
@@ -106,6 +108,7 @@ export default function BubbleToolbar() {
 
   const selection = editor.state.selection;
   const showFormattingButtons = selection.$from.sameParent(selection.$to);
+  const showStreamError = Boolean(aiEditError) && lastAiMode === "inline";
 
   return (
     <Popover.Root open={open} onOpenChange={handleOpenChange}>
@@ -197,6 +200,11 @@ export default function BubbleToolbar() {
                     />
                   )}
                 </div>
+                {showStreamError && (
+                  <div className="px-2 pb-1 text-xs text-red-500">
+                    Oops, something went wrong.
+                  </div>
+                )}
               </Toolbar.Root>
             </Tooltip.Provider>
           </Popover.Popup>

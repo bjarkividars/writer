@@ -16,6 +16,9 @@ type ChatPanelContextValue = {
   isChatCollapsed: boolean;
   setChatCollapsed: (collapsed: boolean) => void;
   openChatPanel: () => void;
+  focusChatInput: () => void;
+  isChatInputFocused: () => boolean;
+  registerChatInput: (input: HTMLTextAreaElement | null) => void;
   scrollToBottom: () => void;
   registerScrollToBottom: (scroll: (() => void) | null) => void;
 };
@@ -25,12 +28,29 @@ const ChatPanelContext = createContext<ChatPanelContextValue | null>(null);
 export function ChatPanelProvider({ children }: { children: ReactNode }) {
   const panelRef = usePanelRef();
   const [isChatCollapsed, setChatCollapsed] = useState(false);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollToBottomRef = useRef<() => void>(() => {});
 
   const openChatPanel = useCallback(() => {
     panelRef.current?.expand();
     setChatCollapsed(false);
   }, [panelRef]);
+
+  const registerChatInput = useCallback(
+    (input: HTMLTextAreaElement | null) => {
+      chatInputRef.current = input;
+    },
+    []
+  );
+
+  const focusChatInput = useCallback(() => {
+    chatInputRef.current?.focus();
+  }, []);
+
+  const isChatInputFocused = useCallback(() => {
+    if (typeof document === "undefined") return false;
+    return document.activeElement === chatInputRef.current;
+  }, []);
 
   const registerScrollToBottom = useCallback((scroll: (() => void) | null) => {
     scrollToBottomRef.current = scroll ?? (() => {});
@@ -46,6 +66,9 @@ export function ChatPanelProvider({ children }: { children: ReactNode }) {
       isChatCollapsed,
       setChatCollapsed,
       openChatPanel,
+      focusChatInput,
+      isChatInputFocused,
+      registerChatInput,
       scrollToBottom,
       registerScrollToBottom,
     }),
@@ -53,6 +76,9 @@ export function ChatPanelProvider({ children }: { children: ReactNode }) {
       panelRef,
       isChatCollapsed,
       openChatPanel,
+      focusChatInput,
+      isChatInputFocused,
+      registerChatInput,
       scrollToBottom,
       registerScrollToBottom,
     ]

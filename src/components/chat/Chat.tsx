@@ -19,7 +19,7 @@ import { useChatScroll } from "./useChatScroll";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 
 export default function Chat() {
-  const { submitAiInstruction, aiInteractionState, lastAiMode } =
+  const { submitAiInstruction, aiInteractionState, lastAiMode, aiEditError } =
     useEditorContext();
   const {
     messages,
@@ -134,6 +134,11 @@ export default function Chat() {
             persistModelMessage().catch((error) => {
               console.error("[chat] Failed to persist model message", error);
             });
+          },
+          onError: () => {
+            setMessageContent(modelMessageId, "");
+            setMessageOptions(modelMessageId, []);
+            finishMessage(modelMessageId);
           },
           onOptionsUpdate: (options) => {
             const mapped = options.map((option, index) => ({
@@ -264,6 +269,11 @@ export default function Chat() {
               console.error("[chat] Failed to persist model message", error);
             });
           },
+          onError: () => {
+            setMessageContent(modelMessageId, "");
+            setMessageOptions(modelMessageId, []);
+            finishMessage(modelMessageId);
+          },
           onOptionsUpdate: (options) => {
             const mapped = options.map((item, optionIndex) => ({
               index: optionIndex,
@@ -293,6 +303,7 @@ export default function Chat() {
     aiInteractionState === "loading" ||
     aiInteractionState === "streaming" ||
     aiInteractionState === "editing";
+  const showStreamError = Boolean(aiEditError) && lastAiMode === "chat";
 
   return (
     <div className="flex h-full flex-col" key={sessionId}>
@@ -316,6 +327,11 @@ export default function Chat() {
           <ScrollAreaThumb />
         </ScrollAreaScrollbar>
       </ScrollAreaRoot>
+      {showStreamError && (
+        <div className="px-4 pb-2 text-xs text-red-500">
+          Oops, something went wrong.
+        </div>
+      )}
       <div className="px-4">
         <ChatInput onSubmit={handleSubmit} disabled={isBusy} />
       </div>
