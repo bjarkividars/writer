@@ -435,6 +435,7 @@ export function EditorProvider({
           aiEdit.run(instruction, {
             mode: options?.mode ?? "inline",
             sessionId,
+            attachments: options?.attachments,
             onMessageUpdate: handleMessageUpdate,
             onMessageComplete: handleMessageComplete,
             onOptionsUpdate: handleOptionsUpdate,

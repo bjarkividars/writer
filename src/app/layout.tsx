@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Writer",
-  description: "AI-powered writing suite with streaming assistance.",
+  description:
+    "An AI-native writing environment with real-time, in-context assistance.",
 };
 
 export default function RootLayout({

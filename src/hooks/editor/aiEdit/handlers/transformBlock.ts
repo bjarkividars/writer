@@ -7,8 +7,10 @@ import {
   clampPos,
   clampRange,
   findBlockRange,
+  hasParagraphBreak,
   isStringArray,
   normalizeItems,
+  splitParagraphs,
   shiftRangesAfterEdit,
 } from "../utils";
 
@@ -27,6 +29,12 @@ export function handleTransformBlockOperation(args: {
   const headingLevel = (operation as { headingLevel?: unknown }).headingLevel;
   const itemsValue = (operation as { items?: unknown }).items;
 
+  const rawItems = isStringArray(itemsValue) ? itemsValue : [];
+  const rawCombined = rawItems.join(" ");
+  const splitIntoBlocks =
+    (blockType === "paragraph" || blockType === "heading") &&
+    hasParagraphBreak(rawCombined);
+
   if (
     typeof blockType !== "string" ||
     (blockType !== "paragraph" &&
@@ -38,7 +46,9 @@ export function handleTransformBlockOperation(args: {
     return false;
   }
 
-  const cleanedItems = normalizeItems(itemsValue);
+  const cleanedItems = splitIntoBlocks
+    ? splitParagraphs(rawCombined)
+    : normalizeItems(itemsValue);
   if (cleanedItems.length === 0) {
     return false;
   }
@@ -70,13 +80,31 @@ export function handleTransformBlockOperation(args: {
     deleteTo = state.insertedRange ? state.insertedRange.to : insertPos;
   }
 
-  const blockNode = buildBlockNode({
-    blockType: blockType as BlockType,
-    headingLevel: typeof headingLevel === "number" ? headingLevel : null,
-    items: cleanedItems,
-  });
+  const blockNodes = splitIntoBlocks && cleanedItems.length > 1
+    ? [
+        buildBlockNode({
+          blockType: blockType as BlockType,
+          headingLevel: typeof headingLevel === "number" ? headingLevel : null,
+          items: [cleanedItems[0]],
+        }),
+        ...cleanedItems.slice(1).map((paragraph) =>
+          buildBlockNode({
+            blockType:
+              blockType === "heading" ? "paragraph" : (blockType as BlockType),
+            headingLevel: null,
+            items: [paragraph],
+          })
+        ),
+      ].filter(Boolean)
+    : [
+        buildBlockNode({
+          blockType: blockType as BlockType,
+          headingLevel: typeof headingLevel === "number" ? headingLevel : null,
+          items: cleanedItems,
+        }),
+      ].filter(Boolean);
 
-  if (!blockNode) {
+  if (blockNodes.length === 0) {
     return false;
   }
 
@@ -98,7 +126,7 @@ export function handleTransformBlockOperation(args: {
     .chain()
     .focus()
     .deleteRange({ from: deleteRange.from, to: deleteRange.to })
-    .insertContentAt(insertPos, blockNode)
+    .insertContentAt(insertPos, blockNodes)
     .run();
   const afterSize = editor.state.doc.nodeSize;
   const delta = afterSize - beforeSize;

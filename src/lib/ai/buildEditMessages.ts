@@ -63,11 +63,22 @@ export async function buildEditMessages(params: {
       return `${item.id} [${typeLabel}]: "${item.text}"`;
     })
     .join("\n");
+  const attachmentLabels = attachments.length
+    ? attachments
+        .map((attachment) => attachment.originalName ?? attachment.key)
+        .join(", ")
+    : "none";
+  const attachmentNote = attachments.length
+    ? "IMPORTANT: A file is attached to this message. Use it. Do not ask the user to attach or paste it."
+    : "";
 
   const userPrompt = `**USER INSTRUCTION:**
 ${instruction}
 
 **MODE:** ${mode}
+
+**ATTACHED FILES (CURRENT REQUEST):** ${attachmentLabels}
+${attachmentNote ? `\n${attachmentNote}\n` : ""}
 
 ${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}**AVAILABLE ITEMS:**
 ${itemsText}`;

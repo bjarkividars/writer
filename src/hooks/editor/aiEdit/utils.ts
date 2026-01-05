@@ -8,7 +8,7 @@ export function isStringArray(value: unknown): value is string[] {
 }
 
 export function normalizeItems(items: string[]) {
-  return items.map((item) => item.trim()).filter(Boolean);
+  return items.map((item) => sanitizeInlineText(item)).filter(Boolean);
 }
 
 export function areStringArraysEqual(left: string[], right: string[]) {
@@ -51,6 +51,31 @@ export function getRequestedHeadingLevel(markdown: string): number | null {
 export function stripHeadingMarker(text: string) {
   const match = text.match(/^\s*#{1,3}\s+(.+)$/);
   return match ? match[1] : text;
+}
+
+export function sanitizeInlineText(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\\n|\/n/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function hasParagraphBreak(value: string) {
+  return /(\r|\n|\\n|\/n)/.test(value);
+}
+
+export function splitParagraphs(value: string) {
+  const normalized = value
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\\n|\/n/g, "\n");
+  return normalized
+    .split(/\n+/)
+    .map((part) => sanitizeInlineText(part))
+    .filter(Boolean);
 }
 
 function isWhitespace(char: string) {

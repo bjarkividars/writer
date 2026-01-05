@@ -7,8 +7,10 @@ import {
   clampPos,
   clampRange,
   findBlockRange,
+  hasParagraphBreak,
   isStringArray,
   normalizeItems,
+  splitParagraphs,
   shiftRangesAfterEdit,
 } from "../utils";
 
@@ -28,6 +30,12 @@ export function handleInsertBlockOperation(args: {
   const headingLevel = (operation as { headingLevel?: unknown }).headingLevel;
   const itemsValue = (operation as { items?: unknown }).items;
 
+  const rawItems = isStringArray(itemsValue) ? itemsValue : [];
+  const rawCombined = rawItems.join(" ");
+  const splitIntoBlocks =
+    (blockType === "paragraph" || blockType === "heading") &&
+    hasParagraphBreak(rawCombined);
+
   if (
     (position !== "before" && position !== "after") ||
     typeof blockType !== "string" ||
@@ -40,7 +48,9 @@ export function handleInsertBlockOperation(args: {
     return false;
   }
 
-  const cleanedItems = normalizeItems(itemsValue);
+  const cleanedItems = splitIntoBlocks
+    ? splitParagraphs(rawCombined)
+    : normalizeItems(itemsValue);
   if (cleanedItems.length === 0) {
     return false;
   }
@@ -60,13 +70,31 @@ export function handleInsertBlockOperation(args: {
     state.insertPos = insertPos;
   }
 
-  const blockNode = buildBlockNode({
-    blockType: blockType as BlockType,
-    headingLevel: typeof headingLevel === "number" ? headingLevel : null,
-    items: cleanedItems,
-  });
+  const blockNodes = splitIntoBlocks && cleanedItems.length > 1
+    ? [
+        buildBlockNode({
+          blockType: blockType as BlockType,
+          headingLevel: typeof headingLevel === "number" ? headingLevel : null,
+          items: [cleanedItems[0]],
+        }),
+        ...cleanedItems.slice(1).map((paragraph) =>
+          buildBlockNode({
+            blockType:
+              blockType === "heading" ? "paragraph" : (blockType as BlockType),
+            headingLevel: null,
+            items: [paragraph],
+          })
+        ),
+      ].filter(Boolean)
+    : [
+        buildBlockNode({
+          blockType: blockType as BlockType,
+          headingLevel: typeof headingLevel === "number" ? headingLevel : null,
+          items: cleanedItems,
+        }),
+      ].filter(Boolean);
 
-  if (!blockNode) {
+  if (blockNodes.length === 0) {
     return false;
   }
 
@@ -83,7 +111,7 @@ export function handleInsertBlockOperation(args: {
   if (deleteRange.from !== deleteRange.to) {
     chain.deleteRange({ from: deleteRange.from, to: deleteRange.to });
   }
-  chain.insertContentAt(insertPos, blockNode).run();
+  chain.insertContentAt(insertPos, blockNodes).run();
   const afterSize = editor.state.doc.nodeSize;
   const delta = afterSize - beforeSize;
   const oldLength = deleteRange.to - deleteRange.from;

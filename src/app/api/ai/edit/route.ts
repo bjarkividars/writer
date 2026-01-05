@@ -1,5 +1,4 @@
-import { openai } from "@ai-sdk/openai";
-// import { google } from "@ai-sdk/google";
+import { openai, OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 import {
     streamText,
     Output,
@@ -25,13 +24,7 @@ import {
  */
 export async function POST(req: NextRequest) {
     try {
-        // Parse and validate request body
         const body = await req.json();
-        console.log("[BE] Received request:", {
-            instruction: body.instruction,
-            selection: body.selection,
-            documentTextLength: body.documentText?.length,
-        });
 
         const request = EditRequest.parse(body);
 
@@ -80,12 +73,6 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        console.log("[BE] Built block map:", {
-            itemsCount: items.length,
-            selection: request.selection,
-            chatHistoryCount: chatHistory.length,
-        });
-
         // Build the messages with structured context
         const messages = await buildEditMessages({
             instruction: request.instruction,
@@ -95,25 +82,29 @@ export async function POST(req: NextRequest) {
             chatHistory,
             attachments: request.attachments,
         });
-        console.log("[BE] Built messages:", messages.length);
 
-        // Stream structured output using AI SDK
         const result = streamText({
             model: openai("gpt-5.2"),
             messages,
             output: Output.object({
                 schema: AiEditOutput,
             }),
-            maxOutputTokens: 2000,
+            providerOptions: {
+                openai: {
+                    reasoningEffort: request.mode === "chat" ? "low" : "none",
+                } satisfies OpenAIChatLanguageModelOptions,
+            },
             onFinish: (event) => {
                 console.log("[BE] Stream finished:", {
                     usage: event.usage,
+                    message: event.response.messages[0].content,
                     finishReason: event.finishReason,
                 });
             },
+            onError: (error) => {
+                console.error("[BE] Stream error:", error);
+            },
         });
-
-        console.log("[BE] Starting stream...");
 
         // Create combined stream: block map first, then AI response
         const blockMapChunk = JSON.stringify({ blockMap: items }) + "\n";
@@ -123,7 +114,6 @@ export async function POST(req: NextRequest) {
                 try {
                     // Send block map as first chunk
                     controller.enqueue(new TextEncoder().encode(blockMapChunk));
-                    console.log("[BE] Sent block map");
 
                     // Then stream AI response as-is
                     const reader = result.textStream.getReader();
@@ -135,7 +125,6 @@ export async function POST(req: NextRequest) {
 
                     controller.close();
                 } catch (error) {
-                    console.error("[BE] Stream error:", error);
                     controller.error(error);
                 }
             },
@@ -148,8 +137,6 @@ export async function POST(req: NextRequest) {
             },
         });
     } catch (error) {
-        console.error("[BE] Error in /api/ai/edit:", error);
-
         return new Response(
             JSON.stringify({
                 error: error instanceof Error ? error.message : "Unknown error",

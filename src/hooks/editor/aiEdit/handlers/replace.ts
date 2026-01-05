@@ -7,8 +7,15 @@ import {
 } from "@/lib/ai/markdownParser";
 import type { EditState } from "../types";
 import {
+  buildBlockNode,
+  clampPos,
+  clampRange,
+  findBlockRange,
   getRequestedHeadingLevel,
   getTextLength,
+  hasParagraphBreak,
+  sanitizeInlineText,
+  splitParagraphs,
   shiftRangesAfterEdit,
 } from "../utils";
 
@@ -23,10 +30,17 @@ export function handleReplaceOperation(args: {
 
   if (!state.targetRange) return false;
 
-  const newText =
+  const rawReplacement =
     typeof (operation as { replacement?: unknown }).replacement === "string"
-      ? (operation as { replacement?: unknown }).replacement
-      : "";
+      ? (operation as { replacement?: unknown }).replacement as string
+      : ""
+  const canSplitIntoBlocks =
+    state.blockType === "paragraph" || state.blockType === "heading";
+  const paragraphs = canSplitIntoBlocks && hasParagraphBreak(rawReplacement)
+    ? splitParagraphs(rawReplacement)
+    : [];
+  const primaryParagraph = paragraphs[0] ?? rawReplacement;
+  const newText = sanitizeInlineText(primaryParagraph);
   const oldText = state.replacementSeen;
 
   if (newText === oldText || typeof newText !== "string") return false;
@@ -81,6 +95,61 @@ export function handleReplaceOperation(args: {
       blockMap,
       editsState,
     });
+  }
+
+  const extraParagraphs = paragraphs.slice(1);
+  if (extraParagraphs.length > 0 || state.insertedRange) {
+    const blockRange = findBlockRange(editor, state.targetRange.from);
+    const baseInsertPos = state.insertedRange
+      ? state.insertedRange.from
+      : blockRange?.to ?? state.targetRange.to;
+    const insertPos = clampPos(editor.state.doc, baseInsertPos);
+    const deleteFrom = state.insertedRange?.from ?? insertPos;
+    const deleteTo = state.insertedRange?.to ?? insertPos;
+    const deleteRange = clampRange(editor.state.doc, deleteFrom, deleteTo);
+    if (!deleteRange) return true;
+
+    const extraBlockType =
+      state.blockType === "heading" ? "paragraph" : state.blockType ?? "paragraph";
+    const extraBlocks = extraParagraphs
+      .map((paragraph) =>
+        buildBlockNode({
+          blockType: extraBlockType,
+          headingLevel: null,
+          items: [paragraph],
+        })
+      )
+      .filter(Boolean);
+
+    const beforeSize = editor.state.doc.nodeSize;
+    const chain = editor.chain().focus();
+    if (deleteRange.from !== deleteRange.to) {
+      chain.deleteRange({ from: deleteRange.from, to: deleteRange.to });
+    }
+    if (extraBlocks.length > 0) {
+      chain.insertContentAt(insertPos, extraBlocks);
+    }
+    chain.run();
+    const afterSize = editor.state.doc.nodeSize;
+    const delta = afterSize - beforeSize;
+    const oldLength = deleteRange.to - deleteRange.from;
+    const nextLength = oldLength + delta;
+
+    if (delta !== 0 || oldLength !== 0) {
+      shiftRangesAfterEdit({
+        from: deleteRange.from,
+        to: deleteRange.to,
+        delta,
+        nextLength: 0,
+        blockMap,
+        editsState,
+      });
+    }
+
+    state.insertedRange =
+      extraBlocks.length > 0
+        ? { from: insertPos, to: insertPos + nextLength }
+        : null;
   }
 
   return true;
