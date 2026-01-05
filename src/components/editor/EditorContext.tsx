@@ -16,6 +16,7 @@ import { useDocumentAutosave } from "@/hooks/editor/useDocumentAutosave";
 import { useChatContext } from "@/components/chat/ChatContext";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 import type { AiEditOption } from "@/lib/ai/schemas";
+import type { AttachmentInput } from "@/lib/api/schemas";
 import { useSessionContext } from "@/components/session/SessionContext";
 
 type SelectionRange = { from: number; to: number } | null;
@@ -38,6 +39,7 @@ type AiEditMode = "inline" | "chat";
 type AiInstructionOptions = {
   mode?: AiEditMode;
   sessionId?: string;
+  attachments?: AttachmentInput[];
   onMessageUpdate?: (message: string) => void;
   onMessageComplete?: (message: string) => void;
   onOptionsUpdate?: (options: AiEditOption[]) => void;

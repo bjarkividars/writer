@@ -9,23 +9,26 @@ import {
   ScrollAreaScrollbar,
   ScrollAreaThumb,
 } from "@/components/ScrollArea";
-import { ArrowUp, Command } from "lucide-react";
+import { ArrowUp, Command, Plus } from "lucide-react";
 import { Button } from "@/components/Button";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
 import { useOnboardingTip } from "@/components/onboarding/OnboardingContext";
 
 type ChatInputProps = {
   onSubmit: (value: string) => void;
+  onSelectAttachment?: (file: File) => void | Promise<void>;
   disabled?: boolean;
 };
 
 export default function ChatInput({
   onSubmit,
+  onSelectAttachment,
   disabled = false,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { registerChatInput } = useChatPanelContext();
   const { tip, isActive: isShortcutTipActive, dismiss } = useOnboardingTip(
     "chat-shortcut-back-to-doc"
@@ -66,6 +69,20 @@ export default function ChatInput({
     }
   };
 
+  const handleAttachmentClick = () => {
+    if (disabled) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleAttachmentChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file || !onSelectAttachment) return;
+    await onSelectAttachment(file);
+    event.target.value = "";
+  };
+
   return (
     <Tooltip.Root open={showShortcutTip}>
       <Tooltip.Trigger
@@ -83,6 +100,24 @@ export default function ChatInput({
             >
               <form onSubmit={handleSubmit}>
                 <div className="bg-surface rounded-lg min-h-[32px] flex items-stretch border border-border">
+                  <div className="flex items-center pl-2">
+                    <Button
+                      type="button"
+                      onClick={handleAttachmentClick}
+                      className="btn-secondary btn-icon h-7 w-7"
+                      aria-label="Attach document"
+                      disabled={disabled}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handleAttachmentChange}
+                      className="hidden"
+                    />
+                  </div>
                   <ScrollAreaRoot className="w-full">
                     <ScrollAreaViewport className="max-h-[180px] rounded-md">
                       <ScrollAreaContent>

@@ -2,6 +2,7 @@ import { oc, type InferContractRouterInputs, type InferContractRouterOutputs } f
 import { z } from "zod";
 import {
   AppendMessageResponseSchema,
+  AttachmentInputSchema,
   ChatOptionInputSchema,
   CreateSessionResponseSchema,
   DeleteSessionResponseSchema,
@@ -13,6 +14,8 @@ import {
   SaveDocumentResponseSchema,
   SelectMessageOptionResponseSchema,
   SessionIdSchema,
+  UploadAttachmentRequestSchema,
+  UploadAttachmentResponseSchema,
   UpdateSessionResponseSchema,
 } from "../api/schemas";
 
@@ -65,25 +68,33 @@ export const apiContract = {
       .input(z.object({ sessionId: SessionIdSchema }).strict())
       .output(GenerateSessionTitleResponseSchema),
   },
-  messages: {
-    append: oc
-      .route({ method: "POST", path: "/api/session/:sessionId/messages" })
-      .input(
-        z
-          .object({
-            sessionId: SessionIdSchema,
-            role: z.enum(["user", "model"]),
-            content: z.string().min(1),
-            options: z.array(ChatOptionInputSchema).optional(),
-          })
-          .strict()
-      )
-      .output(AppendMessageResponseSchema),
-    selectOption: oc
-      .route({
-        method: "PATCH",
-        path: "/api/session/:sessionId/messages/:messageId/select-option",
-      })
+    messages: {
+      append: oc
+        .route({ method: "POST", path: "/api/session/:sessionId/messages" })
+        .input(
+          z
+            .object({
+              sessionId: SessionIdSchema,
+              role: z.enum(["user", "model"]),
+              content: z.string().min(1),
+              options: z.array(ChatOptionInputSchema).optional(),
+              attachments: z.array(AttachmentInputSchema).optional(),
+            })
+            .strict()
+        )
+        .output(AppendMessageResponseSchema),
+      uploadAttachment: oc
+        .route({
+          method: "POST",
+          path: "/api/session/:sessionId/attachments",
+        })
+        .input(UploadAttachmentRequestSchema)
+        .output(UploadAttachmentResponseSchema),
+      selectOption: oc
+        .route({
+          method: "PATCH",
+          path: "/api/session/:sessionId/messages/:messageId/select-option",
+        })
       .input(
         z
           .object({

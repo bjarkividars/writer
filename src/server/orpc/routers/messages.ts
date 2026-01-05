@@ -2,7 +2,11 @@ import { os } from "@/server/orpc/os";
 import { withIdentity } from "@/server/orpc/middleware/identity";
 import { requireSessionAccess } from "@/server/orpc/middleware/require-session-access";
 import { handleServiceError } from "@/server/orpc/utils/handle-service-error";
-import { appendMessage, selectMessageOption } from "@/server/services/messages";
+import {
+  appendMessage,
+  selectMessageOption,
+  uploadMessageAttachment,
+} from "@/server/services/messages";
 
 export const messagesRouter = {
   append: os.messages.append
@@ -15,6 +19,20 @@ export const messagesRouter = {
           role: input.role,
           content: input.content,
           options: input.options,
+          attachments: input.attachments,
+        })
+      )
+    ),
+  uploadAttachment: os.messages.uploadAttachment
+    .use(withIdentity)
+    .use(requireSessionAccess)
+    .handler(async ({ input }) =>
+      handleServiceError(() =>
+        uploadMessageAttachment({
+          sessionId: input.sessionId,
+          filename: input.filename,
+          mimeType: input.mimeType,
+          dataBase64: input.dataBase64,
         })
       )
     ),

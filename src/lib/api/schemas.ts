@@ -34,6 +34,31 @@ export const ChatMessageSchema = z
   })
   .strict();
 
+export const AttachmentInputSchema = z
+  .object({
+    bucket: z.string().min(1),
+    key: z.string().min(1),
+    mimeType: z.string().min(1),
+    size: z.number().int().nonnegative(),
+    originalName: z.string().nullable().optional(),
+  })
+  .strict();
+
+export const UploadAttachmentRequestSchema = z
+  .object({
+    sessionId: SessionIdSchema,
+    filename: z.string().min(1),
+    mimeType: z.string().min(1),
+    dataBase64: z.string().min(1),
+  })
+  .strict();
+
+export const UploadAttachmentResponseSchema = z
+  .object({
+    attachment: AttachmentInputSchema,
+  })
+  .strict();
+
 export const CreateSessionResponseSchema = z
   .object({
     sessionId: SessionIdSchema,
@@ -87,8 +112,15 @@ export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>;
 export type GetSessionResponse = z.infer<typeof GetSessionResponseSchema>;
 export type SaveDocumentResponse = z.infer<typeof SaveDocumentResponseSchema>;
 export type AppendMessageResponse = z.infer<typeof AppendMessageResponseSchema>;
+export type AttachmentInput = z.infer<typeof AttachmentInputSchema>;
 export type GenerateSessionTitleResponse = z.infer<
   typeof GenerateSessionTitleResponseSchema
+>;
+export type UploadAttachmentRequest = z.infer<
+  typeof UploadAttachmentRequestSchema
+>;
+export type UploadAttachmentResponse = z.infer<
+  typeof UploadAttachmentResponseSchema
 >;
 export type SelectMessageOptionResponse = z.infer<
   typeof SelectMessageOptionResponseSchema

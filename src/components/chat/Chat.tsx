@@ -6,8 +6,9 @@ import { useSessionContext } from "@/components/session/SessionContext";
 import {
   useAppendMessageMutation,
   useSelectOptionMutation,
+  useUploadAttachmentMutation,
 } from "@/hooks/orpc/useMessageMutations";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ScrollAreaRoot,
   ScrollAreaViewport,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ScrollArea";
 import { useChatScroll } from "./useChatScroll";
 import { useChatPanelContext } from "@/components/chat/ChatPanelContext";
+import type { AttachmentInput } from "@/lib/api/schemas";
 
 export default function Chat() {
   const { submitAiInstruction, aiInteractionState, lastAiMode, aiEditError } =
@@ -36,6 +38,10 @@ export default function Chat() {
   const { registerScrollToBottom } = useChatPanelContext();
   const appendMessageMutation = useAppendMessageMutation();
   const selectOptionMutation = useSelectOptionMutation();
+  const uploadAttachmentMutation = useUploadAttachmentMutation();
+  const [pendingAttachments, setPendingAttachments] = useState<
+    AttachmentInput[]
+  >([]);
   const isChatAi = lastAiMode === "chat";
   const { scrollRef, bottomRef, scrollToBottom } = useChatScroll({
     messages,
@@ -51,6 +57,36 @@ export default function Chat() {
     }
   }, [requestTitle, title]);
 
+  const handleAttachmentSelected = useCallback(
+    async (file: File) => {
+      try {
+        const sessionId = await ensureSession();
+        const dataBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") {
+              resolve(reader.result);
+            } else {
+              reject(new Error("Failed to read attachment."));
+            }
+          };
+          reader.onerror = () => reject(reader.error ?? new Error("Read failed."));
+          reader.readAsDataURL(file);
+        });
+        const response = await uploadAttachmentMutation.mutateAsync({
+          sessionId,
+          filename: file.name,
+          mimeType: file.type || "application/octet-stream",
+          dataBase64,
+        });
+        setPendingAttachments((prev) => [...prev, response.attachment]);
+      } catch (error) {
+        console.error("[chat] Failed to upload attachment", error);
+      }
+    },
+    [ensureSession, uploadAttachmentMutation]
+  );
+
   useEffect(() => {
     registerScrollToBottom(scrollToBottom);
     return () => {
@@ -64,12 +100,17 @@ export default function Chat() {
 
     const sessionPromise = ensureSession();
     const userMessageId = addUserMessage(trimmed);
+    const attachments = pendingAttachments;
+    if (attachments.length > 0) {
+      setPendingAttachments([]);
+    }
     const persistUserMessage = async () => {
       const sessionId = await sessionPromise;
       const saved = await appendMessageMutation.mutateAsync({
         sessionId,
         role: "user",
         content: trimmed,
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
       setMessagePersistedId(userMessageId, saved.id);
       await requestTitleIfNeeded();
@@ -86,6 +127,7 @@ export default function Chat() {
         submitAiInstruction(trimmed, {
           mode: "chat",
           sessionId,
+          attachments: attachments.length > 0 ? attachments : undefined,
           onMessageUpdate: (message) => {
             setMessageContent(modelMessageId, message);
           },
@@ -333,7 +375,11 @@ export default function Chat() {
         </div>
       )}
       <div className="px-4">
-        <ChatInput onSubmit={handleSubmit} disabled={isBusy} />
+        <ChatInput
+          onSubmit={handleSubmit}
+          onSelectAttachment={handleAttachmentSelected}
+          disabled={isBusy}
+        />
       </div>
     </div>
   );

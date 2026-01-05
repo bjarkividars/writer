@@ -5,9 +5,9 @@ import { ScrollArea as BaseScrollArea } from "@base-ui/react/scroll-area";
 
 const rootBaseClasses = "relative";
 const topFadeClasses =
-  "before:content-[''] before:block before:absolute before:left-0 before:right-0 before:top-0 before:h-6 before:pointer-events-none before:rounded-md before:transition-opacity before:duration-100 before:ease-out before:opacity-0 before:bg-[linear-gradient(to_bottom,var(--color-background),transparent)] before:z-10 data-[overflow-y-start]:before:opacity-100";
+  "before:content-[''] before:block before:absolute before:left-0 before:right-0 before:top-0 before:h-6 before:pointer-events-none before:rounded-md before:transition-opacity before:duration-100 before:ease-out before:opacity-0 before:bg-[linear-gradient(to_bottom,var(--scroll-fade-color,var(--color-background)),transparent)] before:z-10 data-[overflow-y-start]:before:opacity-100";
 const bottomFadeClasses =
-  "after:content-[''] after:block after:absolute after:left-0 after:right-0 after:bottom-0 after:h-6 after:pointer-events-none after:rounded-md after:transition-opacity after:duration-100 after:ease-out after:opacity-0 after:bg-[linear-gradient(to_top,var(--color-background),transparent)] after:z-10 data-[overflow-y-end]:after:opacity-100";
+  "after:content-[''] after:block after:absolute after:left-0 after:right-0 after:bottom-0 after:h-6 after:pointer-events-none after:rounded-md after:transition-opacity after:duration-100 after:ease-out after:opacity-0 after:bg-[linear-gradient(to_top,var(--scroll-fade-color,var(--color-background)),transparent)] after:z-10 data-[overflow-y-end]:after:opacity-100";
 const viewportBaseClasses = "relative z-0 overflow-y-auto";
 
 const scrollbarClasses =

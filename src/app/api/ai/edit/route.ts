@@ -1,10 +1,17 @@
 import { openai } from "@ai-sdk/openai";
 // import { google } from "@ai-sdk/google";
-import { streamText, Output } from "ai";
+import {
+    streamText,
+    Output,
+    type FilePart,
+    type ModelMessage,
+    type TextPart,
+} from "ai";
 import { NextRequest } from "next/server";
 import { SentenceTokenizer } from "natural";
 import { prisma } from "@/lib/prisma";
 import { requireSessionAccess } from "@/lib/session-access";
+import { getObjectBase64 } from "@/lib/s3";
 import {
     EditRequest,
     AiEditOutput,
@@ -34,7 +41,16 @@ export async function POST(req: NextRequest) {
             : buildBlockMapFromText(request.documentText);
         const { items } = blockMapResult;
 
-        let chatHistory: { role: "user" | "model"; content: string }[] = [];
+        let chatHistory: {
+            role: "user" | "model";
+            content: string;
+            attachments: {
+                bucket: string;
+                key: string;
+                mimeType: string;
+                size: number;
+            }[];
+        }[] = [];
         if (request.sessionId) {
             const access = await requireSessionAccess(request.sessionId);
             if (!access.ok) {
@@ -45,12 +61,24 @@ export async function POST(req: NextRequest) {
                 where: { sessionId: request.sessionId },
                 orderBy: { createdAt: "desc" },
                 take: 20,
-                select: { role: true, content: true },
+                select: {
+                    role: true,
+                    content: true,
+                    attachments: {
+                        select: {
+                            bucket: true,
+                            key: true,
+                            mimeType: true,
+                            size: true,
+                        },
+                    },
+                },
             });
 
             chatHistory = messages.reverse().map((message) => ({
                 role: message.role as "user" | "model",
                 content: message.content,
+                attachments: message.attachments,
             }));
 
             const lastMessage = chatHistory.at(-1);
@@ -68,20 +96,21 @@ export async function POST(req: NextRequest) {
             chatHistoryCount: chatHistory.length,
         });
 
-        // Build the prompt with structured context
-        const prompt = buildPrompt({
+        // Build the messages with structured context
+        const messages = await buildMessages({
             instruction: request.instruction,
             mode: request.mode ?? "inline",
             selection: request.selection,
             items,
             chatHistory,
+            attachments: request.attachments,
         });
-        console.log("[BE] Built prompt, length:", prompt.length);
+        console.log("[BE] Built messages:", messages.length);
 
         // Stream structured output using AI SDK
         const result = streamText({
             model: openai("gpt-5.2"),
-            prompt,
+            messages,
             output: Output.object({
                 schema: AiEditOutput,
             }),
@@ -210,17 +239,47 @@ function buildBlockMapFromText(text: string) {
     return { items };
 }
 
+type ChatHistoryMessage = {
+    role: "user" | "model";
+    content: string;
+    attachments: {
+        bucket: string;
+        key: string;
+        mimeType: string;
+        size: number;
+    }[];
+};
+
+type MessagePart = TextPart | FilePart;
+const createTextPart = (text: string): TextPart => ({ type: "text", text });
+const createFilePart = (input: {
+    data: string;
+    mediaType: string;
+}): FilePart => ({
+    type: "file",
+    data: input.data,
+    mediaType: input.mediaType,
+});
+
 /**
- * Build a concise prompt for the AI model
+ * Build a concise message list for the AI model
  */
-function buildPrompt(params: {
+async function buildMessages(params: {
     instruction: string;
     mode: "inline" | "chat";
     selection?: { from: number; to: number; text: string };
     items: BlockItem[];
-    chatHistory: { role: "user" | "model"; content: string }[];
-}): string {
+    chatHistory: ChatHistoryMessage[];
+    attachments?: {
+        bucket: string;
+        key: string;
+        mimeType: string;
+        size: number;
+        originalName?: string | null;
+    }[];
+}): Promise<ModelMessage[]> {
     const { instruction, mode, selection, items, chatHistory } = params;
+    const attachments = params.attachments ?? [];
 
     const itemsText = items
         .map((item) => {
@@ -236,17 +295,14 @@ function buildPrompt(params: {
         })
         .join("\n");
 
-    const chatHistoryText = chatHistory
-        .map((message) => `${message.role}: ${message.content}`)
-        .join("\n");
-    const chatHistorySection = chatHistoryText
-        ? `**CHAT HISTORY:**\n${chatHistoryText}\n\n`
-        : "";
-
-    return `You are a document editor. Your sole role is to help the user write the document and nothing else. Apply the user's instruction using markdown formatting.
+    const systemPrompt = `You are a document editor. Your sole role is to help the user write the document and nothing else. Apply the user's instruction using markdown formatting.
 Document content must be final, authoritative prose suitable for publication.
 Never include conversational text in the document. Do not ask or answer questions in the document content.
 If a question needs to be asked, ask it only in the message field.
+FILE attachments, when present, are available to you and must be used as primary source material.
+Never claim you cannot access an attached file. Never ask the user to paste content that is already provided in an attached file.
+If additional info is needed (tone, length, perspective), ask only for that; otherwise proceed using the file content.
+You will receive the USER INSTRUCTION, MODE, CURRENT SELECTION (if any), and AVAILABLE ITEMS in the final user message.
 
 **DECISION STEP:**
 First, decide exactly ONE mode:
@@ -257,15 +313,6 @@ Once decided, follow ONLY the rules for that mode. Do not mix modes.
 MODE=inline: prefer applying edits immediately when reasonably confident.
 MODE=chat: prefer asking clarification questions when intent is ambiguous.
 The USER INSTRUCTION always overrides chat history if there is any conflict.
-
-**USER INSTRUCTION:**
-${instruction}
-
-**MODE:** ${mode}
-
-${chatHistorySection}${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}
-**AVAILABLE ITEMS:**
-${itemsText}
 
 **EXAMPLES:**
 
@@ -326,4 +373,87 @@ ${itemsText}
 30. If MODE=inline, only set message when you need clarification; otherwise set message to "".
 31. If you need clarification, set edits to [] and ask the question in message.
 32. If the only available item has empty text, use a replace operation on that item to create the initial content.`;
+
+    const userPrompt = `**USER INSTRUCTION:**
+${instruction}
+
+**MODE:** ${mode}
+
+${selection ? `**CURRENT SELECTION:**\n"${selection.text}"\n` : ""}**AVAILABLE ITEMS:**
+${itemsText}`;
+
+    const historyMessages = await Promise.all(
+        chatHistory.map(async (message): Promise<ModelMessage> => {
+            if (message.role !== "user" || message.attachments.length === 0) {
+                if (message.role === "model") {
+                    return { role: "assistant", content: message.content };
+                }
+                return { role: "user", content: message.content };
+            }
+
+            const parts: MessagePart[] = [];
+            const trimmedContent = message.content.trim();
+            if (trimmedContent.length > 0) {
+                parts.push(createTextPart(message.content));
+            }
+
+            const pdfAttachments = message.attachments.filter(
+                (attachment) => attachment.mimeType === "application/pdf"
+            );
+
+            const base64Files = await Promise.all(
+                pdfAttachments.map(async (attachment) => {
+                    const bucket =
+                        attachment.bucket || process.env.S3_BUCKET_NAME || "";
+                    if (!bucket) {
+                        throw new Error("Missing S3 bucket for attachment.");
+                    }
+
+                    const base64 = await getObjectBase64({
+                        bucket,
+                        key: attachment.key,
+                        maxBytes: 5 * 1024 * 1024,
+                    });
+
+                    return createFilePart({
+                        data: `data:${attachment.mimeType};base64,${base64}`,
+                        mediaType: attachment.mimeType,
+                    });
+                })
+            );
+
+            parts.push(...base64Files);
+
+            return { role: "user", content: parts.length ? parts : message.content };
+        })
+    );
+
+    const instructionMessage = attachments.length
+        ? {
+            role: "user" as const,
+            content: [
+                createTextPart(userPrompt),
+                ...(await Promise.all(
+                    attachments.map(async (attachment) => {
+                        const base64 = await getObjectBase64({
+                            bucket: attachment.bucket,
+                            key: attachment.key,
+                            maxBytes: 5 * 1024 * 1024,
+                        });
+
+                        return createFilePart({
+                            data: `data:${attachment.mimeType};base64,${base64}`,
+                            mediaType: attachment.mimeType,
+                        });
+                    })
+                )),
+            ] as MessagePart[],
+        }
+        : { role: "user" as const, content: userPrompt };
+
+    return [
+        { role: "system", content: systemPrompt },
+        ...historyMessages,
+        instructionMessage,
+    ];
 }

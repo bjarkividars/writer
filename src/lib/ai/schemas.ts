@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AttachmentInputSchema } from "@/lib/api/schemas";
 
 export const BlockTypeSchema = z.enum([
   "paragraph",
@@ -48,6 +49,7 @@ export const EditRequest = z
     instruction: z.string(),
     mode: z.enum(["inline", "chat"]).optional(),
     sessionId: z.string().min(1).optional(),
+    attachments: z.array(AttachmentInputSchema).optional(),
     selection: z
       .object({
         from: z.number().int().min(0),

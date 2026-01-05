@@ -55,10 +55,10 @@ export default function Sidebar() {
         `}
         aria-label="Sessions sidebar"
       >
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full min-h-0 flex flex-col overflow-hidden">
           <SidebarHeader />
           <SidebarContent sessions={sessions} loading={loading} />
-          <div className="px-4 pb-2 text-xs text-foreground-muted w-[280px]">
+          <div className="px-4 py-2 text-xs text-foreground-muted w-[280px]">
             Check out my other projects{" "}
             <a
               href="https://bjarki.me"

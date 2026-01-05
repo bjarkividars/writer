@@ -13,6 +13,9 @@ type AppendMessageOutput = ApiOutputs["messages"]["append"];
 type SelectOptionInput = ApiInputs["messages"]["selectOption"];
 type SelectOptionOutput = ApiOutputs["messages"]["selectOption"];
 
+type UploadAttachmentInput = ApiInputs["messages"]["uploadAttachment"];
+type UploadAttachmentOutput = ApiOutputs["messages"]["uploadAttachment"];
+
 export function useAppendMessageMutation(
   options?: MutationOptions<AppendMessageOutput, AppendMessageInput>
 ) {
@@ -48,6 +51,20 @@ export function useSelectOptionMutation(
           input: { sessionId: variables.sessionId },
         }),
       });
+      await onSuccess?.(data, variables, context, mutationContext);
+    },
+  });
+}
+
+export function useUploadAttachmentMutation(
+  options?: MutationOptions<UploadAttachmentOutput, UploadAttachmentInput>
+) {
+  const { onSuccess, ...rest } = options ?? {};
+
+  return useMutation({
+    ...orpc.messages.uploadAttachment.mutationOptions(),
+    ...rest,
+    onSuccess: async (data, variables, context, mutationContext) => {
       await onSuccess?.(data, variables, context, mutationContext);
     },
   });

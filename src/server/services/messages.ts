@@ -1,4 +1,6 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { putObject } from "@/lib/s3";
 import { ServiceError } from "@/server/services/errors";
 
 type MessageOption = {
@@ -45,6 +47,13 @@ export async function appendMessage(input: {
   role: "user" | "model";
   content: string;
   options?: { index: number; title: string; content: string }[];
+  attachments?: {
+    bucket: string;
+    key: string;
+    mimeType: string;
+    size: number;
+    originalName?: string | null;
+  }[];
 }): Promise<SessionMessage> {
   if (input.options?.length && input.role !== "model") {
     throw new ServiceError(
@@ -67,6 +76,17 @@ export async function appendMessage(input: {
           })),
         }
         : undefined,
+      attachments: input.attachments?.length
+        ? {
+          create: input.attachments.map((attachment) => ({
+            bucket: attachment.bucket,
+            key: attachment.key,
+            mimeType: attachment.mimeType,
+            size: attachment.size,
+            originalName: attachment.originalName ?? null,
+          })),
+        }
+        : undefined,
     },
     include: { options: true },
   });
@@ -84,6 +104,65 @@ export async function appendMessage(input: {
       content: option.content,
     })),
   });
+}
+
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+function sanitizeFilename(value: string) {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+export async function uploadMessageAttachment(input: {
+  sessionId: string;
+  filename: string;
+  mimeType: string;
+  dataBase64: string;
+}): Promise<{
+  attachment: {
+    bucket: string;
+    key: string;
+    mimeType: string;
+    size: number;
+    originalName: string;
+  };
+}> {
+  const bucket = process.env.S3_BUCKET_NAME;
+  if (!bucket) {
+    throw new ServiceError("BAD_REQUEST", "Missing S3 bucket.");
+  }
+
+  const base64 = input.dataBase64.includes("base64,")
+    ? input.dataBase64.split("base64,").pop() ?? ""
+    : input.dataBase64;
+  const buffer = Buffer.from(base64, "base64");
+
+  if (buffer.length === 0) {
+    throw new ServiceError("BAD_REQUEST", "Attachment is empty.");
+  }
+
+  if (buffer.length > MAX_ATTACHMENT_BYTES) {
+    throw new ServiceError("BAD_REQUEST", "Attachment exceeds size limit.");
+  }
+
+  const safeName = sanitizeFilename(input.filename) || "document";
+  const key = `attachments/${input.sessionId}/${randomUUID()}-${safeName}`;
+
+  await putObject({
+    bucket,
+    key,
+    body: buffer,
+    contentType: input.mimeType,
+  });
+
+  return {
+    attachment: {
+      bucket,
+      key,
+      mimeType: input.mimeType,
+      size: buffer.length,
+      originalName: input.filename,
+    },
+  };
 }
 
 export async function selectMessageOption(input: {

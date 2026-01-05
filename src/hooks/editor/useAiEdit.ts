@@ -6,6 +6,7 @@ import { EditRequest } from "@/lib/ai/schemas";
 import type { EditState } from "@/hooks/editor/aiEdit/types";
 import { dispatchOperation } from "@/hooks/editor/aiEdit/dispatchOperation";
 import { parsePartialEdits } from "@/hooks/editor/aiEdit/streamParser";
+import type { AttachmentInput } from "@/lib/api/schemas";
 
 type AiInteractionState = "idle" | "loading" | "streaming" | "editing" | "complete";
 
@@ -14,6 +15,7 @@ type AiEditMode = "inline" | "chat";
 type AiEditRunOptions = {
   mode?: AiEditMode;
   sessionId?: string;
+  attachments?: AttachmentInput[];
   onMessageUpdate?: (message: string) => void;
   onMessageComplete?: (message: string) => void;
   onOptionsUpdate?: (options: AiEditOption[]) => void;
@@ -448,6 +450,7 @@ export function useAiEdit(editor: Editor | null) {
           blockMap: blockMapItems,
           mode: options?.mode ?? "inline",
           sessionId: options?.sessionId,
+          attachments: options?.attachments,
         });
 
         // Start streaming
