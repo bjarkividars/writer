@@ -3,11 +3,14 @@
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/Button";
+import { useSessionContext } from "@/components/session/SessionContext";
 
 export default function SidebarHeader() {
   const router = useRouter();
+  const { resetSession } = useSessionContext();
 
   const handleNewSession = () => {
+    resetSession();
     router.push("/");
   };
 

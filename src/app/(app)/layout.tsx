@@ -6,7 +6,10 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import SidebarToggle from "@/components/sidebar/SidebarToggle";
 import FloatingThemeMenu from "@/components/sidebar/FloatingThemeMenu";
 import Header from "@/components/header/Header";
-import { SessionProvider } from "@/components/session/SessionContext";
+import {
+  SessionProvider,
+  useSessionContext,
+} from "@/components/session/SessionContext";
 import { LoadingProvider, useLoadingContext } from "@/components/LoadingProvider";
 import { EditorProvider } from "@/components/editor/EditorContext";
 import { ChatProvider } from "@/components/chat/ChatContext";
@@ -14,7 +17,7 @@ import { ChatPanelProvider } from "@/components/chat/ChatPanelContext";
 import { OnboardingProvider } from "@/components/onboarding/OnboardingContext";
 import { editorExtensions } from "@/editor/extensions";
 
-function AppShell({ children }: { children: React.ReactNode }) {
+function AppWorkspace({ children }: { children: React.ReactNode }) {
   const { isInitialLoading } = useLoadingContext();
   const editorRootRef = useRef<HTMLDivElement>(null);
   const editor = useEditor({
@@ -32,20 +35,28 @@ function AppShell({ children }: { children: React.ReactNode }) {
     <ChatProvider>
       <ChatPanelProvider>
         <EditorProvider editor={editor} editorRootRef={editorRootRef}>
-          <div className="h-dvh w-full bg-background">
-            <SidebarToggle />
-            <FloatingThemeMenu />
-            <div className="h-full flex">
-              <Sidebar />
-              <div className="flex-1 flex flex-col shadow-doc-left relative z-10">
-                {!isInitialLoading && <Header />}
-                <main className="flex-1 overflow-hidden">{children}</main>
-              </div>
-            </div>
+          <div className="flex-1 flex flex-col shadow-doc-left relative z-10">
+            {!isInitialLoading && <Header />}
+            <main className="flex-1 overflow-hidden">{children}</main>
           </div>
         </EditorProvider>
       </ChatPanelProvider>
     </ChatProvider>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
+  const { workspaceKey } = useSessionContext();
+
+  return (
+    <div className="h-dvh w-full bg-background">
+      <SidebarToggle />
+      <FloatingThemeMenu />
+      <div className="h-full flex">
+        <Sidebar />
+        <AppWorkspace key={workspaceKey}>{children}</AppWorkspace>
+      </div>
+    </div>
   );
 }
 

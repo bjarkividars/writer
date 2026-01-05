@@ -22,7 +22,9 @@ type SessionSource = "url" | "created" | null;
 type SessionContextValue = {
   sessionId: string | null;
   sessionSource: SessionSource;
+  workspaceKey: string;
   ensureSession: () => Promise<string>;
+  resetSession: () => void;
   setSessionId: (sessionId: string | null, source?: SessionSource) => void;
   title: string | null;
   setTitle: (title: string | null) => void;
@@ -44,6 +46,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [sessionSource, setSessionSource] = useState<SessionSource>(null);
   const [title, setTitle] = useState<string | null>(null);
   const [isHydrated, setHydrated] = useState(false);
+  const [draftKey, setDraftKey] = useState(0);
   const sessionIdRef = useRef<string | null>(null);
   const createPromiseRef = useRef<Promise<string> | null>(null);
   const titlePromiseRef = useRef<Promise<string | null> | null>(null);
@@ -59,6 +62,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   const setSessionId = useCallback(
     (nextSessionId: string | null, source?: SessionSource) => {
+      const previousSessionId = sessionIdRef.current;
+      if (!nextSessionId && previousSessionId) {
+        setDraftKey((prev) => prev + 1);
+      }
       const nextSource = source ?? (nextSessionId ? "created" : null);
       setSessionIdState(nextSessionId);
       sessionIdRef.current = nextSessionId;
@@ -69,6 +76,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
     },
     [setTitle, setHydrated]
   );
+
+  const resetSession = useCallback(() => {
+    pendingUrlSessionIdRef.current = null;
+    createPromiseRef.current = null;
+    titlePromiseRef.current = null;
+    setSessionId(null, null);
+  }, [setSessionId]);
 
   // Extract sessionId from pathname
   useEffect(() => {
@@ -162,11 +176,20 @@ export function SessionProvider({ children }: SessionProviderProps) {
     return promise;
   }, [ensureSession, title, setTitle, refreshSessions, generateTitleMutation]);
 
+  const workspaceKey = useMemo(() => {
+    if (sessionSource === "url" && sessionId) {
+      return `session-${sessionId}`;
+    }
+    return `draft-${draftKey}`;
+  }, [draftKey, sessionId, sessionSource]);
+
   const value = useMemo(
     () => ({
       sessionId,
       sessionSource,
+      workspaceKey,
       ensureSession,
+      resetSession,
       setSessionId,
       title,
       setTitle,
@@ -178,7 +201,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
     [
       sessionId,
       sessionSource,
+      workspaceKey,
       ensureSession,
+      resetSession,
       setSessionId,
       title,
       setTitle,
