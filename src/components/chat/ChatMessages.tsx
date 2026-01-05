@@ -115,8 +115,7 @@ export default function ChatMessages({
               isLatest &&
               !isBusy &&
               !message.streaming &&
-              selectedIndex === undefined &&
-              !!persistedId;
+              selectedIndex === undefined;
 
             return (
               <ModelMessage key={message.id}>

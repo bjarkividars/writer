@@ -187,7 +187,6 @@ export default function Chat() {
     option: ChatOption,
     index: number
   ) => {
-    if (!persistedId) return;
     selectMessageOption(messageId, index);
 
     const title = option.title.trim();
@@ -208,30 +207,32 @@ export default function Chat() {
 
     sessionPromise
       .then((sessionId) => {
-        selectOptionMutation
-          .mutateAsync({
-            sessionId,
-            messageId: persistedId,
-            index: option.index,
-          })
-          .then((saved) => {
-            setMessageSelectedOptionId(
-              messageId,
-              saved.selectedOptionId ?? null
-            );
-            setMessageOptions(
-              messageId,
-              saved.options.map((item) => ({
-                id: item.id,
-                index: item.index,
-                title: item.title,
-                content: item.content,
-              }))
-            );
-          })
-          .catch((error) => {
-            console.error("[chat] Failed to persist option selection", error);
-          });
+        if (persistedId) {
+          selectOptionMutation
+            .mutateAsync({
+              sessionId,
+              messageId: persistedId,
+              index: option.index,
+            })
+            .then((saved) => {
+              setMessageSelectedOptionId(
+                messageId,
+                saved.selectedOptionId ?? null
+              );
+              setMessageOptions(
+                messageId,
+                saved.options.map((item) => ({
+                  id: item.id,
+                  index: item.index,
+                  title: item.title,
+                  content: item.content,
+                }))
+              );
+            })
+            .catch((error) => {
+              console.error("[chat] Failed to persist option selection", error);
+            });
+        }
 
         submitAiInstruction(instruction, {
           mode: "chat",
