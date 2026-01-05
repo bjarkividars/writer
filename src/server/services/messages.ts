@@ -16,6 +16,13 @@ type SessionMessage = {
   content: string;
   createdAt: string;
   options: MessageOption[];
+  attachments: {
+    bucket: string;
+    key: string;
+    mimeType: string;
+    size: number;
+    originalName?: string | null;
+  }[];
   selectedOptionId?: string;
 };
 
@@ -26,6 +33,13 @@ function mapMessage(message: {
   createdAt: Date;
   selectedOptionId: string | null;
   options: { id: string; index: number; title: string; content: string }[];
+  attachments: {
+    bucket: string;
+    key: string;
+    mimeType: string;
+    size: number;
+    originalName: string | null;
+  }[];
 }): SessionMessage {
   return {
     id: message.id,
@@ -37,6 +51,13 @@ function mapMessage(message: {
       index: option.index,
       title: option.title,
       content: option.content,
+    })),
+    attachments: message.attachments.map((attachment) => ({
+      bucket: attachment.bucket,
+      key: attachment.key,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      originalName: attachment.originalName ?? undefined,
     })),
     selectedOptionId: message.selectedOptionId ?? undefined,
   };
@@ -88,12 +109,12 @@ export async function appendMessage(input: {
         }
         : undefined,
     },
-    include: { options: true },
+    include: { options: true, attachments: true },
   });
 
   return mapMessage({
     id: message.id,
-    role: message.role as 'model' | 'user',
+    role: message.role as "model" | "user",
     content: message.content,
     createdAt: message.createdAt,
     selectedOptionId: message.selectedOptionId,
@@ -102,6 +123,13 @@ export async function appendMessage(input: {
       index: option.index,
       title: option.title,
       content: option.content,
+    })),
+    attachments: message.attachments.map((attachment) => ({
+      bucket: attachment.bucket,
+      key: attachment.key,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      originalName: attachment.originalName ?? null,
     })),
   });
 }
@@ -172,7 +200,7 @@ export async function selectMessageOption(input: {
 }): Promise<SessionMessage> {
   const message = await prisma.chatMessage.findUnique({
     where: { id: input.messageId },
-    include: { options: true },
+    include: { options: true, attachments: true },
   });
 
   if (!message || message.sessionId !== input.sessionId) {
@@ -223,7 +251,7 @@ export async function selectMessageOption(input: {
 
     return tx.chatMessage.findUnique({
       where: { id: input.messageId },
-      include: { options: true },
+      include: { options: true, attachments: true },
     });
   });
 
@@ -233,7 +261,7 @@ export async function selectMessageOption(input: {
 
   return mapMessage({
     id: updatedMessage.id,
-    role: message.role as 'model' | 'user',
+    role: message.role as "model" | "user",
     content: updatedMessage.content,
     createdAt: updatedMessage.createdAt,
     selectedOptionId: updatedMessage.selectedOptionId,
@@ -242,6 +270,13 @@ export async function selectMessageOption(input: {
       index: option.index,
       title: option.title,
       content: option.content,
+    })),
+    attachments: updatedMessage.attachments.map((attachment) => ({
+      bucket: attachment.bucket,
+      key: attachment.key,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      originalName: attachment.originalName ?? null,
     })),
   });
 }

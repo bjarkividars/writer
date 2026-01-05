@@ -47,18 +47,19 @@ export default function Sidebar() {
           bg-surface
           transition-all duration-200 ease-in-out
           z-50 lg:z-auto
+          overflow-hidden
           ${
             isOpen
-              ? "w-[280px] translate-x-0"
+              ? "w-[var(--sidebar-width)] translate-x-0"
               : "w-0 -translate-x-full lg:translate-x-0"
           }
         `}
         aria-label="Sessions sidebar"
       >
-        <div className="h-full min-h-0 flex flex-col overflow-hidden">
+        <div className="h-full w-[var(--sidebar-width)] min-h-0 flex flex-col">
           <SidebarHeader />
           <SidebarContent sessions={sessions} loading={loading} />
-          <div className="px-4 py-2 text-xs text-foreground-muted w-[280px]">
+          <div className="px-4 py-2 text-xs text-foreground-muted w-full">
             Check out my other projects{" "}
             <a
               href="https://bjarki.me"

@@ -35,6 +35,7 @@
     --doc-panel-width: 0px;
     --doc-max-width: 8.5in;
     --doc-inline-padding: 2.5rem;
+    --sidebar-width: 280px;
     --doc-content-left: max(0px,
         calc((var(--doc-panel-width) - var(--doc-max-width)) / 2));
   }

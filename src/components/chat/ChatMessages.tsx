@@ -5,6 +5,7 @@ import ChatEmptyState from "./ChatEmptyState";
 import ChatOptions from "./ChatOptions";
 import type { ChatMessage, ChatOption } from "./ChatContext";
 import type { RefObject } from "react";
+import { FileText } from "lucide-react";
 
 type ChatMessagesProps = {
   messages: ChatMessage[];
@@ -59,6 +60,24 @@ export default function ChatMessages({
   };
 
   const messagesEmpty = messages.length === 0;
+  const renderAttachments = (attachments?: ChatMessage["attachments"]) => {
+    if (!attachments?.length) return null;
+    return (
+      <div className="flex flex-wrap gap-2">
+        {attachments.map((attachment) => (
+          <div
+            key={attachment.key}
+            className="inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-muted/60 px-2.5 py-1 text-[11px] text-foreground/80"
+          >
+            <FileText className="h-3 w-3 text-foreground/60" />
+            <span className="max-w-[180px] truncate font-medium">
+              {attachment.originalName ?? "Attachment"}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="flex min-h-full flex-col gap-4 px-4">
@@ -75,7 +94,12 @@ export default function ChatMessages({
           messages.map((message, index) => {
             if (message.role !== "model") {
               return (
-                <UserMessage key={message.id}>{message.content}</UserMessage>
+                <UserMessage key={message.id}>
+                  <div className="flex flex-col gap-2">
+                    <div>{message.content}</div>
+                    {renderAttachments(message.attachments)}
+                  </div>
+                </UserMessage>
               );
             }
 
@@ -98,6 +122,7 @@ export default function ChatMessages({
               <ModelMessage key={message.id}>
                 <div className="flex flex-col gap-3">
                   {renderModelContent(message)}
+                  {renderAttachments(message.attachments)}
                   {hasOptions ? (
                     <ChatOptions
                       options={message.options ?? []}

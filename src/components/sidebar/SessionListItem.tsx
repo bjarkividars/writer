@@ -73,12 +73,12 @@ export default function SessionListItem({ session }: SessionListItemProps) {
   };
 
   return (
-    <div className="group relative py-0.5">
+    <div className="group relative py-0.5 w-full">
       <Link
         href={`/${session.id}`}
         onClick={handleLinkClick}
         className={`
-          block w-full px-5 py-2.5 pr-10 
+          block px-5 py-2.5 pr-10 max-w-full
           transition-all duration-200 ease-out
           ${isActive ? "bg-hover" : "hover:bg-hover/60"}
         `}

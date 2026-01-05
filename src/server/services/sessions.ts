@@ -34,6 +34,13 @@ type SessionMessage = {
   content: string;
   createdAt: string;
   options: MessageOption[];
+  attachments: {
+    bucket: string;
+    key: string;
+    mimeType: string;
+    size: number;
+    originalName?: string | null;
+  }[];
   selectedOptionId?: string;
 };
 
@@ -81,6 +88,13 @@ function mapMessage(message: {
   createdAt: Date;
   selectedOptionId: string | null;
   options: { id: string; index: number; title: string; content: string }[];
+  attachments: {
+    bucket: string;
+    key: string;
+    mimeType: string;
+    size: number;
+    originalName: string | null;
+  }[];
 }): SessionMessage {
   return {
     id: message.id,
@@ -92,6 +106,13 @@ function mapMessage(message: {
       index: option.index,
       title: option.title,
       content: option.content,
+    })),
+    attachments: message.attachments.map((attachment) => ({
+      bucket: attachment.bucket,
+      key: attachment.key,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      originalName: attachment.originalName ?? undefined,
     })),
     selectedOptionId: message.selectedOptionId ?? undefined,
   };
@@ -146,7 +167,10 @@ export async function getSessionDetails(sessionId: string): Promise<SessionDetai
     where: { id: sessionId },
     include: {
       document: true,
-      messages: { orderBy: { createdAt: "asc" }, include: { options: true } },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: { options: true, attachments: true },
+      },
     },
   });
 
@@ -174,6 +198,13 @@ export async function getSessionDetails(sessionId: string): Promise<SessionDetai
           index: option.index,
           title: option.title,
           content: option.content,
+        })),
+        attachments: message.attachments.map((attachment) => ({
+          bucket: attachment.bucket,
+          key: attachment.key,
+          mimeType: attachment.mimeType,
+          size: attachment.size,
+          originalName: attachment.originalName ?? null,
         })),
       })
     ),

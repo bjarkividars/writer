@@ -14,7 +14,7 @@ export default function SidebarThemeToggle() {
   const { theme, setTheme } = useThemePreference();
 
   return (
-    <div className="px-3 pb-3 shrink-0 w-[280px]">
+    <div className="px-3 pb-3 shrink-0 w-full">
       <div
         className="grid grid-cols-3 gap-1 rounded-md bg-muted p-1"
         role="radiogroup"

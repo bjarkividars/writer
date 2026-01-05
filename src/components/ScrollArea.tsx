@@ -67,7 +67,7 @@ export const ScrollAreaContent = forwardRef<
 >(({ className, ...props }, ref) => (
   <BaseScrollArea.Content
     ref={ref}
-    className={mergeClasses("h-full min-h-full w-full", className)}
+    className={mergeClasses("h-full min-h-full w-full !min-w-0", className)}
     {...props}
   />
 ));

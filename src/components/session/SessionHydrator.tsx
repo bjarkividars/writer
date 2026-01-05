@@ -54,6 +54,7 @@ export function SessionHydrator() {
         role: message.role,
         content: message.content,
         options: message.options,
+        attachments: message.attachments,
         selectedOptionId: message.selectedOptionId ?? null,
         selectedOptionIndex: message.selectedOptionId ? 0 : undefined,
         streaming: false,

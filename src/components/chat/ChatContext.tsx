@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { AttachmentInput } from "@/lib/api/schemas";
 
 export type ChatOption = {
   id?: string;
@@ -23,13 +24,14 @@ export type ChatMessage = {
   content: string;
   streaming: boolean;
   options?: ChatOption[];
+  attachments?: AttachmentInput[];
   selectedOptionIndex?: number;
   selectedOptionId?: string | null;
 };
 
 type ChatContextValue = {
   messages: ChatMessage[];
-  addUserMessage: (content: string) => string;
+  addUserMessage: (content: string, attachments?: AttachmentInput[]) => string;
   startModelMessage: (initialContent?: string) => string;
   setMessageContent: (id: string, content: string) => void;
   setMessageOptions: (id: string, options: ChatOption[]) => void;
@@ -51,14 +53,17 @@ const createMessageId = () => {
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  const addUserMessage = useCallback((content: string) => {
-    const id = createMessageId();
-    setMessages((prev) => [
-      ...prev,
-      { id, role: "user", content, streaming: false },
-    ]);
-    return id;
-  }, []);
+  const addUserMessage = useCallback(
+    (content: string, attachments?: AttachmentInput[]) => {
+      const id = createMessageId();
+      setMessages((prev) => [
+        ...prev,
+        { id, role: "user", content, streaming: false, attachments },
+      ]);
+      return id;
+    },
+    []
+  );
 
   const startModelMessage = useCallback((initialContent = "") => {
     const id = createMessageId();

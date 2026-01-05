@@ -23,17 +23,6 @@ export const ChatOptionInputSchema = z
   })
   .strict();
 
-export const ChatMessageSchema = z
-  .object({
-    id: z.string(),
-    role: z.enum(["user", "model"]),
-    content: z.string(),
-    createdAt: z.string(),
-    options: z.array(ChatOptionSchema),
-    selectedOptionId: z.string().nullable().optional(),
-  })
-  .strict();
-
 export const AttachmentInputSchema = z
   .object({
     bucket: z.string().min(1),
@@ -41,6 +30,18 @@ export const AttachmentInputSchema = z
     mimeType: z.string().min(1),
     size: z.number().int().nonnegative(),
     originalName: z.string().nullable().optional(),
+  })
+  .strict();
+
+export const ChatMessageSchema = z
+  .object({
+    id: z.string(),
+    role: z.enum(["user", "model"]),
+    content: z.string(),
+    createdAt: z.string(),
+    options: z.array(ChatOptionSchema),
+    attachments: z.array(AttachmentInputSchema),
+    selectedOptionId: z.string().nullable().optional(),
   })
   .strict();
 
