@@ -63,6 +63,14 @@ export default function ChatInput({
     return () => registerChatInput(null);
   }, [registerChatInput]);
 
+  useEffect(() => {
+    if (!disabled) return;
+    setTimeout(() => {
+      setIsFocused(false);
+    }, 0);
+    textareaRef.current?.blur();
+  }, [disabled]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || submitDisabled) return;

@@ -34,7 +34,7 @@ export default function Chat() {
     finishMessage,
   } = useChatContext();
   const { ensureSession, requestTitle, title, sessionId } = useSessionContext();
-  const { registerScrollToBottom } = useChatPanelContext();
+  const { registerScrollToBottom, focusChatInput } = useChatPanelContext();
   const appendMessageMutation = useAppendMessageMutation();
   const selectOptionMutation = useSelectOptionMutation();
   const {
@@ -59,6 +59,15 @@ export default function Chat() {
       console.error("[chat] Failed to request title", error);
     }
   }, [requestTitle, title]);
+
+  const maybeRefocusForQuestion = useCallback(
+    (message: string, hasOptions: boolean) => {
+      if (hasOptions) return;
+      if (!message.includes("?")) return;
+      requestAnimationFrame(() => focusChatInput());
+    },
+    [focusChatInput]
+  );
 
   useEffect(() => {
     registerScrollToBottom(scrollToBottom);
@@ -115,6 +124,7 @@ export default function Chat() {
                   : "Edits applied.";
             setMessageContent(modelMessageId, finalMessage);
             finishMessage(modelMessageId);
+            maybeRefocusForQuestion(finalMessage, latestOptions.length > 0);
 
             const persistModelMessage = async () => {
               const saved = await appendMessageMutation.mutateAsync({
@@ -250,6 +260,7 @@ export default function Chat() {
                   : "Edits applied.";
             setMessageContent(modelMessageId, finalMessage);
             finishMessage(modelMessageId);
+            maybeRefocusForQuestion(finalMessage, latestOptions.length > 0);
 
             const persistModelMessage = async () => {
               const saved = await appendMessageMutation.mutateAsync({
