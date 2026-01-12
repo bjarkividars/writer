@@ -28,7 +28,13 @@ export function useDocumentAutosave(
     mutateAsyncRef.current = saveMutation.mutateAsync;
   }, [saveMutation.mutateAsync]);
 
-  const flushSave = useCallback(async () => {
+  const flushSave = useCallback(async (immediate = false) => {
+    // If immediate=true, capture current editor content even if no pending content
+    if (immediate && !pendingContentRef.current && editor) {
+      pendingContentRef.current = editor.getJSON();
+      latestTextRef.current = editor.getText();
+    }
+
     if (isSavingRef.current || !pendingContentRef.current) {
       return;
     }
@@ -57,7 +63,7 @@ export function useDocumentAutosave(
         });
       }
     }
-  }, [ensureSession]);
+  }, [ensureSession, editor]);
 
   const scheduleSave = useCallback(() => {
     if (!editor) return;
@@ -95,4 +101,6 @@ export function useDocumentAutosave(
       }
     };
   }, [editor, scheduleSave]);
+
+  return { flushSave };
 }

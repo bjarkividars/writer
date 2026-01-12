@@ -126,7 +126,7 @@ export function EditorProvider({
   const { openChatPanel, scrollToBottom } = useChatPanelContext();
   const { ensureSession, requestTitle, title } = useSessionContext();
 
-  useDocumentAutosave(editor, ensureSession, undefined, (_, __, text) => {
+  const { flushSave } = useDocumentAutosave(editor, ensureSession, undefined, (_, __, text) => {
     if (title || text.trim().length < TITLE_DOC_THRESHOLD) {
       return;
     }
@@ -258,6 +258,16 @@ export function EditorProvider({
       setHighlightedRange(null);
     }
   }, [aiEdit.aiInteractionState, editor]);
+
+  // Save document immediately when AI completes editing
+  useEffect(() => {
+    if (aiEdit.aiInteractionState === "complete" && editor) {
+      // Flush save immediately with current content, bypassing debounce
+      flushSave(true).catch((error) => {
+        console.error("[EditorContext] Failed to save after AI edit", error);
+      });
+    }
+  }, [aiEdit.aiInteractionState, editor, flushSave]);
 
   // Enter AI mode: capture selection and apply highlight mark
   const enterAiMode = useCallback(() => {

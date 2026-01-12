@@ -33,7 +33,7 @@ export default function Chat() {
     selectMessageOption,
     finishMessage,
   } = useChatContext();
-  const { ensureSession, requestTitle, title, sessionId } = useSessionContext();
+  const { ensureSession, requestTitle, title, sessionId, workspaceKey } = useSessionContext();
   const { registerScrollToBottom, focusChatInput } = useChatPanelContext();
   const appendMessageMutation = useAppendMessageMutation();
   const selectOptionMutation = useSelectOptionMutation();
@@ -334,7 +334,7 @@ export default function Chat() {
   const showStreamError = Boolean(aiEditError) && lastAiMode === "chat";
 
   return (
-    <div className="flex h-full flex-col" key={sessionId}>
+    <div className="flex h-full flex-col" key={workspaceKey}>
       <ScrollAreaRoot
         className="relative flex-1 min-h-0"
         showBottomFade={false}
